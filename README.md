@@ -1,7 +1,5 @@
 # CollabIQ 🤝
 
-To build an intelligent platform that transforms how students form teams and execute projects by combining smart matching, structured planning, and AI-assisted guidance. CollabIQ AI
-
 > **AI-Powered Project Team Builder & Collaboration Platform**
 
 CollabIQ is a web-based platform that helps students transform individual skills into balanced project teams, generate project ideas, and manage project execution in a structured and intelligent way.
