@@ -1,15 +1,19 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+from .constants import AVAILABILITY_VALUES, PROFICIENCY_LEVELS
 
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(f"availability IN {AVAILABILITY_VALUES}", name="ck_users_availability"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -38,7 +42,10 @@ class Skill(Base):
 
 class UserSkill(Base):
     __tablename__ = "user_skills"
-    __table_args__ = (UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),
+        CheckConstraint(f"proficiency_level IN {PROFICIENCY_LEVELS}", name="ck_user_skills_proficiency_level"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

@@ -1,11 +1,12 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+from .constants import PHASE_STATUSES, PROJECT_STATUSES
 
 
 class ProjectRecommendation(Base):
@@ -24,6 +25,7 @@ class ProjectRecommendation(Base):
 
 class Project(Base):
     __tablename__ = "projects"
+    __table_args__ = (CheckConstraint(f"status IN {PROJECT_STATUSES}", name="ck_projects_status"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     team_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("teams.id"), unique=True, nullable=False)
@@ -32,7 +34,7 @@ class Project(Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="accepted")
+    status: Mapped[str] = mapped_column(String(20), default="accepted", server_default="accepted")
 
     team: Mapped["Team"] = relationship(back_populates="project")
     recommendation: Mapped["ProjectRecommendation"] = relationship(back_populates="project")
@@ -57,11 +59,13 @@ class Roadmap(Base):
 
 class RoadmapPhase(Base):
     __tablename__ = "roadmap_phases"
+    __table_args__ = (CheckConstraint(f"status IN {PHASE_STATUSES}", name="ck_roadmap_phases_status"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     roadmap_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("roadmaps.id"), nullable=False)
     phase_name: Mapped[str] = mapped_column(String(100), nullable=False)
     phase_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="todo", server_default="todo")
     target_date: Mapped[date | None] = mapped_column(Date)
 
     roadmap: Mapped["Roadmap"] = relationship(back_populates="phases")
