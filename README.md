@@ -67,11 +67,13 @@ CollabIQ automates and improves this process using intelligent matching and stru
 
 | Name | Role |
 |---|---|
-| Mariam Khalife | Team Lead |
-| Boudiab-101 | Matching & Logic / AI Engineer|
-| Lara-bouezz | Frontend Developer |
-| Nancy-Mohammad | Database Engineer |
-| HIKMAT-NOUN | Backend Lead  |
+| Mariam Khalife | Team Lead & Backend |
+| HIKMAT-NOUN | Database & AI |
+| Lara-bouezz | AI |
+| Nancy-Mohammad | Frontend |
+| Boudiab-101 | Frontend |
+
+> See [`docs/TEAM_ROLES.md`](docs/TEAM_ROLES.md) for a full breakdown of each member's responsibilities.
 
 ---
 
