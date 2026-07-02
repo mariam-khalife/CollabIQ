@@ -68,10 +68,10 @@ CollabIQ automates and improves this process using intelligent matching and stru
 | Name | Role |
 |---|---|
 | Mariam Khalife | Team Lead |
-| Boudiab-101 | Backend Lead |
+| Boudiab-101 | Matching & Logic / AI Engineer|
 | Lara-bouezz | Frontend Developer |
 | Nancy-Mohammad | Database Engineer |
-| HIKMAT-NOUN | Matching & Logic / AI Engineer |
+| HIKMAT-NOUN | Backend Lead  |
 
 ---
 
