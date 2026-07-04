@@ -1,60 +1,47 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.schemas.auth import RegisterRequest, LoginRequest
 from app.database import get_db
-from app.models.user import User
-from app.utils.security import hash_password, verify_password
+from app.core.security import create_access_token
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from app.schemas.user import UserResponse
+from app.services.auth_service import register_user, authenticate_user
 
-router = APIRouter()
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"]
+)
 
 
-# REGISTER
-@router.post("/register")
-def register(user: RegisterRequest, db: Session = Depends(get_db)):
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(user_data: RegisterRequest, db: Session = Depends(get_db)):
+    user = register_user(db, user_data)
 
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered"
+        )
 
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    return user
 
-    new_user = User(
-        full_name=user.full_name,
-        email=user.email,
-        password=hash_password(user.password)
+
+@router.post("/login", response_model=TokenResponse)
+def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+    user = authenticate_user(db, login_data.email, login_data.password)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+
+    access_token = create_access_token(
+        data={"sub": str(user.id)}
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
     return {
-        "message": "User registered successfully",
-        "user": {
-            "id": new_user.id,
-            "email": new_user.email,
-            "full_name": new_user.full_name
-        }
-    }
-
-
-# LOGIN
-@router.post("/login")
-def login(user: LoginRequest, db: Session = Depends(get_db)):
-
-    db_user = db.query(User).filter(User.email == user.email).first()
-
-    if not db_user:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-
-    if not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-
-    return {
-        "message": "Login successful",
-        "user": {
-            "id": db_user.id,
-            "email": db_user.email,
-            "full_name": db_user.full_name
-        }
+        "access_token": access_token,
+        "token_type": "bearer"
     }
