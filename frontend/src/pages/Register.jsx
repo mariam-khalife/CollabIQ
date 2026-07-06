@@ -1,6 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaUniversity,
+  FaGraduationCap,
+} from "react-icons/fa";
 import "../styles/auth.css";
 
 function Register() {
@@ -55,39 +63,54 @@ function Register() {
 
         <form onSubmit={handleSubmit}>
   <label>Full Name</label>
+  <div className="input-group">
+  <FaUser className="input-icon" />
+
   <input
     type="text"
     name="full_name"
-    placeholder="Enter your full name"
+    placeholder="Full Name"
     value={form.full_name}
     onChange={handleChange}
   />
+</div>
 
   <div className="row">
     <div className="input-group">
       <label>University</label>
-      <input
-        type="text"
-        name="university"
-        placeholder="University"
-        value={form.university}
-        onChange={handleChange}
-      />
+      <div className="input-group">
+  <FaUniversity className="input-icon" />
+
+  <input
+    type="text"
+    name="university"
+    placeholder="University"
+    value={form.university}
+    onChange={handleChange}
+  />
+</div>
     </div>
 
     <div className="input-group">
       <label>Major</label>
-      <input
-        type="text"
-        name="major"
-        placeholder="Major"
-        value={form.major}
-        onChange={handleChange}
-      />
+      <div className="input-group">
+  <FaGraduationCap className="input-icon" />
+
+  <input
+    type="text"
+    name="major"
+    placeholder="Major"
+    value={form.major}
+    onChange={handleChange}
+  />
+</div>
     </div>
   </div>
 
   <label>Institutional Email</label>
+  <div className="input-group">
+  <FaEnvelope className="input-icon" />
+
   <input
     type="email"
     name="email"
@@ -95,8 +118,12 @@ function Register() {
     value={form.email}
     onChange={handleChange}
   />
+</div>
 
   <label>Password</label>
+  <div className="input-group">
+  <FaLock className="input-icon" />
+
   <input
     type="password"
     name="password"
@@ -104,6 +131,9 @@ function Register() {
     value={form.password}
     onChange={handleChange}
   />
+
+  <FaEye className="eye-icon" />
+</div>
 
   <label>Confirm Password</label>
   <input

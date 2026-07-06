@@ -152,3 +152,88 @@ body {
   width: 16px !important;
   height: 16px;
 }
+/* Input with icons */
+.input-group {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 45px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 16px;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+}
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 20px 15px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 25px;
+  }
+
+  .logo-section h1 {
+    font-size: 32px;
+  }
+
+  .logo-section p {
+    font-size: 14px;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .logo-box {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+
+  .logo-section h1 {
+    font-size: 28px;
+  }
+
+  .auth-card button {
+    font-size: 15px;
+    padding: 12px;
+  }
+
+  .input-group input {
+    font-size: 14px;
+  }
+}

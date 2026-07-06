@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import "../styles/auth.css";
 
 function Login() {
@@ -8,7 +9,7 @@ function Login() {
     email: "",
     password: "",
   });
-
+const [showPassword, setShowPassword] = useState(false);
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -17,19 +18,21 @@ function Login() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/auth/login",
-        form
-      );
+  console.log("Form submitted");
 
-      alert(response.data.message);
-    } catch (error) {
-      alert(error.response?.data?.detail || "Login failed");
-    }
-  };
+  try {
+    const response = await axios.post(
+      "http://127.0.0.1:8000/auth/login",
+      form
+    );
+
+    alert(response.data.message);
+  } catch (error) {
+    alert(error.response?.data?.detail || "Login failed");
+  }
+};
 
   return (
   <div className="auth-container">
@@ -45,13 +48,18 @@ function Login() {
 
       <form onSubmit={handleSubmit}>
         <label>Email Address</label>
-        <input
-          type="email"
-          name="email"
-          placeholder="name@university.edu"
-          value={form.email}
-          onChange={handleChange}
-        />
+        <div className="input-group">
+  <FaEnvelope className="input-icon" />
+
+  <input
+  type="email"
+  name="email"
+  placeholder="name@university.edu"
+  value={form.email}
+  onChange={handleChange}
+  required
+/>
+</div>
 
         <div
   style={{
@@ -75,13 +83,25 @@ function Login() {
   </Link>
 </div>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="••••••••"
-          value={form.password}
-          onChange={handleChange}
-        />
+        <div className="input-group">
+  <FaLock className="input-icon" />
+
+  <input
+  type={showPassword ? "text" : "password"}
+  name="password"
+  placeholder="••••••••"
+  value={form.password}
+  onChange={handleChange}
+  required
+/>
+ <span
+    className="eye-icon"
+    onClick={() => setShowPassword(!showPassword)}
+  >
+    {showPassword ? <FaEyeSlash /> : <FaEye />}
+  </span>
+  
+</div>
 
         <div style={{ marginTop: "15px", marginBottom: "10px" }}>
           <label
