@@ -5,17 +5,23 @@ import "../styles/auth.css";
 
 function Register() {
   const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-  });
+  full_name: "",
+  university: "",
+  major: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  agree: false,
+});
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const { name, value, type, checked } = e.target;
+
+  setForm({
+    ...form,
+    [name]: type === "checkbox" ? checked : value,
+  });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,38 +39,93 @@ function Register() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>CollabIQ</h1>
-        <p>Create your account</p>
+  <div className="auth-container">
+
+    <div className="logo-section">
+      <div className="logo-box">🚀</div>
+      <h1>CollabIQ</h1>
+      <p>Academic Excellence Through AI Collaboration</p>
+    </div>
+
+    <div className="auth-card">
+      <h2>Create your account</h2>
+      <p className="subtitle">
+        Join the academic excellence network and build your future team.
+      </p>
 
         <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="full_name"
-            placeholder="Full Name"
-            value={form.full_name}
-            onChange={handleChange}
-          />
+  <label>Full Name</label>
+  <input
+    type="text"
+    name="full_name"
+    placeholder="Enter your full name"
+    value={form.full_name}
+    onChange={handleChange}
+  />
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-          />
+  <div className="row">
+    <div className="input-group">
+      <label>University</label>
+      <input
+        type="text"
+        name="university"
+        placeholder="University"
+        value={form.university}
+        onChange={handleChange}
+      />
+    </div>
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-          />
+    <div className="input-group">
+      <label>Major</label>
+      <input
+        type="text"
+        name="major"
+        placeholder="Major"
+        value={form.major}
+        onChange={handleChange}
+      />
+    </div>
+  </div>
 
-          <button type="submit">Register</button>
-        </form>
+  <label>Institutional Email</label>
+  <input
+    type="email"
+    name="email"
+    placeholder="name@university.edu"
+    value={form.email}
+    onChange={handleChange}
+  />
+
+  <label>Password</label>
+  <input
+    type="password"
+    name="password"
+    placeholder="••••••••"
+    value={form.password}
+    onChange={handleChange}
+  />
+
+  <label>Confirm Password</label>
+  <input
+    type="password"
+    name="confirmPassword"
+    placeholder="••••••••"
+    value={form.confirmPassword}
+    onChange={handleChange}
+  />
+
+  <label className="checkbox">
+    <input
+      type="checkbox"
+      name="agree"
+      checked={form.agree}
+      onChange={handleChange}
+    />
+    I agree to the Terms of Service and Privacy Policy
+  </label>
+
+  <button type="submit">Create Account</button>
+</form>
 
         <p className="switch-text">
           Already have an account? <Link to="/">Login</Link>

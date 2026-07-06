@@ -1,67 +1,154 @@
-body {
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
   font-family: Arial, Helvetica, sans-serif;
-  background: #f4f7fb;
+  background: #f7f8fc;
 }
 
 .auth-container {
-  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* ---------- Logo Section ---------- */
+
+.logo-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-box {
+  width: 60px;
+  height: 60px;
+  margin: auto;
+  background: #4f46e5;
+  border-radius: 15px;
+  color: white;
+  font-size: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
+.logo-section h1 {
+  margin-top: 15px;
+  font-size: 42px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.logo-section p {
+  color: #6b7280;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+/* ---------- Card ---------- */
+
 .auth-card {
-  width: 380px;
+  width: 430px;
   background: white;
+  border-radius: 16px;
   padding: 35px;
-  border-radius: 15px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
 }
 
-.auth-card h1 {
-  text-align: center;
-  color: #2563eb;
+.auth-card h2 {
+  color: #111827;
+  margin-bottom: 8px;
 }
 
-.auth-card p {
-  text-align: center;
-  color: #666;
+.subtitle {
+  color: #6b7280;
+  margin-bottom: 25px;
+}
+
+/* ---------- Form ---------- */
+
+.auth-card label {
+  display: block;
+  margin-bottom: 8px;
+  margin-top: 15px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .auth-card input {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 15px;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  padding: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
 }
+
+.auth-card input:focus {
+  border-color: #4f46e5;
+}
+
+/* ---------- Button ---------- */
 
 .auth-card button {
   width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: #2563eb;
+  margin-top: 25px;
+  padding: 14px;
+  background: #4338ca;
   color: white;
-  cursor: pointer;
+  border: none;
+  border-radius: 10px;
   font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .auth-card button:hover {
-  background: #1d4ed8;
+  background: #3730a3;
 }
 
+/* ---------- Footer ---------- */
+
 .switch-text {
-  margin-top: 20px;
+  text-align: center;
+  margin-top: 25px;
+  color: #6b7280;
 }
 
 .switch-text a {
-  color: #2563eb;
+  color: #4338ca;
   text-decoration: none;
+  font-weight: bold;
 }
 
 .switch-text a:hover {
   text-decoration: underline;
+}
+.row {
+  display: flex;
+  gap: 15px;
+}
+
+.input-group {
+  flex: 1;
+}
+
+.checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: normal !important;
+}
+
+.checkbox input {
+  width: 16px !important;
+  height: 16px;
 }
