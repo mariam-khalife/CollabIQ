@@ -1,7 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
+import {
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaGraduationCap,
+} from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 import "../styles/auth.css";
 
 function Login() {
@@ -18,21 +25,19 @@ const [showPassword, setShowPassword] = useState(false);
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  console.log("Form submitted");
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/auth/login",
+        form
+      );
 
-  try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/auth/login",
-      form
-    );
-
-    alert(response.data.message);
-  } catch (error) {
-    alert(error.response?.data?.detail || "Login failed");
-  }
-};
+      alert(response.data.message);
+    } catch (error) {
+      alert(error.response?.data?.detail || "Login failed");
+    }
+  };
 
   return (
   <div className="auth-container">
@@ -117,7 +122,9 @@ const [showPassword, setShowPassword] = useState(false);
           </label>
         </div>
 
-        <button type="submit">Login</button>
+        <button type="submit">
+  Login
+</button>
       </form>
 
       <div
@@ -140,28 +147,16 @@ const [showPassword, setShowPassword] = useState(false);
         <hr style={{ flex: 1 }} />
       </div>
 
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button
-          type="button"
-          style={{
-            background: "white",
-            color: "#111",
-            border: "1px solid #ddd",
-          }}
-        >
-          Google
-        </button>
+      <div className="social-buttons">
+        <button type="button" className="social-button">
+  <FcGoogle />
+  Google
+</button>
 
-        <button
-          type="button"
-          style={{
-            background: "white",
-            color: "#111",
-            border: "1px solid #ddd",
-          }}
-        >
-          EduID
-        </button>
+<button type="button" className="social-button">
+  <FaGraduationCap />
+  EduID
+</button>
       </div>
 
       <p className="switch-text">

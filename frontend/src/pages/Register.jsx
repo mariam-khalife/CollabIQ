@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
 import {
   FaUser,
   FaEnvelope,
@@ -154,7 +155,40 @@ function Register() {
     I agree to the Terms of Service and Privacy Policy
   </label>
 
-  <button type="submit">Create Account</button>
+ <button type="submit">
+  Create Account
+</button>
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    margin: "25px 0",
+  }}
+>
+  <hr style={{ flex: 1 }} />
+  <span
+    style={{
+      margin: "0 10px",
+      color: "#777",
+      fontSize: "14px",
+    }}
+  >
+    Or continue with
+  </span>
+  <hr style={{ flex: 1 }} />
+</div>
+
+<div className="social-buttons">
+  <button type="button" className="social-button">
+    <FcGoogle />
+    Google
+  </button>
+
+  <button type="button" className="social-button">
+    <FaGraduationCap />
+    EduID
+  </button>
+</div>
 </form>
 
         <p className="switch-text">

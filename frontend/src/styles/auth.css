@@ -96,6 +96,10 @@ body {
 
 /* ---------- Button ---------- */
 
+/* ---------- Button ---------- */
+
+/* ---------- Primary Button ---------- */
+
 .auth-card button {
   width: 100%;
   margin-top: 25px;
@@ -236,4 +240,38 @@ body {
   .input-group input {
     font-size: 14px;
   }
+}
+/* Social login buttons */
+
+.social-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.social-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0;
+
+  padding: 12px;
+
+  background: white !important;
+  color: #374151 !important;
+
+  border: 1px solid #d1d5db !important;
+  border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.social-button:hover {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
 }
