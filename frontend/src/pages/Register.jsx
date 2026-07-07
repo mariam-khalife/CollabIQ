@@ -34,7 +34,15 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPassword) {
+  alert("Passwords do not match.");
+  return;
+}
 
+if (!form.agree) {
+  alert("You must agree to the Terms of Service.");
+  return;
+}
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/auth/register",
@@ -68,12 +76,12 @@ function Register() {
   <FaUser className="input-icon" />
 
   <input
-    type="text"
-    name="full_name"
-    placeholder="Full Name"
-    value={form.full_name}
-    onChange={handleChange}
-  />
+  type="text"
+  name="full_name"
+  value={form.full_name}
+  onChange={handleChange}
+  required
+/>
 </div>
 
   <div className="row">
