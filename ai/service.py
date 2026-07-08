@@ -20,6 +20,9 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from . import matching  # noqa: E402
 
+# A team leader is shown at most this many candidates per matching run.
+MAX_SUGGESTIONS = 5
+
 
 def _suggest_role_for_skill(db: Session, skill_id: UUID | None) -> Role | None:
     if skill_id is None:
@@ -31,8 +34,10 @@ def _suggest_role_for_skill(db: Session, skill_id: UUID | None) -> Role | None:
 
 
 def generate_match_suggestions(
-    db: Session, team_id: UUID, required_skill_ids: list[UUID], count: int = 5
+    db: Session, team_id: UUID, required_skill_ids: list[UUID], count: int = MAX_SUGGESTIONS
 ) -> list[MatchSuggestion]:
+    count = min(count, MAX_SUGGESTIONS)
+
     team = db.get(Team, team_id)
     if team is None:
         raise ValueError(f"Team {team_id} not found")

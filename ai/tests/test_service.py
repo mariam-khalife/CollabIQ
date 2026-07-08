@@ -116,6 +116,26 @@ def test_user_with_pending_invitation_is_not_suggested(db):
     assert all(s.suggested_user_id != invited.id for s in suggestions)
 
 
+def test_never_returns_more_than_five_suggestions(db):
+    role = Role(role_name="Backend Developer")
+    skill = Skill(name="FastAPI", category="Backend")
+    db.add_all([role, skill])
+    db.flush()
+
+    leader = _make_user(db, "Leader", "leader-cap@example.com")
+    for i in range(8):
+        candidate = _make_user(db, f"Candidate {i}", f"candidate{i}@example.com")
+        db.add(UserSkill(user_id=candidate.id, skill_id=skill.id, proficiency_level="advanced"))
+
+    team = Team(team_name="Team Cap", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    suggestions = service.generate_match_suggestions(db, team.id, [skill.id], count=50)
+
+    assert len(suggestions) == service.MAX_SUGGESTIONS
+
+
 def test_generate_match_suggestions_raises_for_unknown_team(db):
     with pytest.raises(ValueError):
         service.generate_match_suggestions(db, uuid.uuid4(), [], count=5)
