@@ -1,0 +1,4 @@
+# Smallest possible level: one step forward.
+B G*
+robot: 0 0 R
+functions: F1=2

@@ -1,0 +1,7 @@
+# Serpentine: snake through all three rows. Solvable with a single
+# 4-slot function: F1: fwd, [G]right, [O]left, call F1
+B  B* B* G*
+O* B* B* G*
+O* B* B* B*
+robot: 0 0 R
+functions: F1=4

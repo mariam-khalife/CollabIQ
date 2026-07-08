@@ -1,0 +1,4 @@
+# The second star sits across a void gap: unreachable, no solution.
+B* . G*
+robot: 0 0 R
+functions: F1=3
