@@ -17,6 +17,8 @@ function Login() {
     password: "",
   });
 const [showPassword, setShowPassword] = useState(false);
+const [loading, setLoading] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -26,7 +28,8 @@ const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setErrorMessage("");
+setLoading(true);
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/auth/login",
@@ -35,8 +38,15 @@ const [showPassword, setShowPassword] = useState(false);
 
       alert(response.data.message);
     } catch (error) {
-      alert(error.response?.data?.detail || "Login failed");
+      setErrorMessage(
+  error.response?.data?.detail || "Login failed. Please try again."
+);
+      setLoading(false);
     }
+
+    finally {
+  setLoading(false);
+}
   };
 
   return (
@@ -52,6 +62,21 @@ const [showPassword, setShowPassword] = useState(false);
       <p className="subtitle">Welcome back!</p>
 
       <form onSubmit={handleSubmit}>
+        {errorMessage && (
+  <p
+    style={{
+      color: "#dc2626",
+      background: "#fef2f2",
+      border: "1px solid #fecaca",
+      padding: "10px",
+      borderRadius: "8px",
+      marginBottom: "15px",
+      fontSize: "14px",
+    }}
+  >
+    {errorMessage}
+  </p>
+)}
         <label>Email Address</label>
         <div className="input-group">
   <FaEnvelope className="input-icon" />
@@ -122,8 +147,8 @@ const [showPassword, setShowPassword] = useState(false);
           </label>
         </div>
 
-        <button type="submit">
-  Login
+        <button type="submit" disabled={loading}>
+  {loading ? "Logging in..." : "Login"}
 </button>
       </form>
 

@@ -14,6 +14,7 @@ import "../styles/auth.css";
 
 function Register() {
   const [form, setForm] = useState({
+    
   full_name: "",
   university: "",
   major: "",
@@ -22,6 +23,8 @@ function Register() {
   confirmPassword: "",
   agree: false,
 });
+const [loading, setLoading] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
 
   const handleChange = (e) => {
   const { name, value, type, checked } = e.target;
@@ -34,6 +37,7 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
     if (form.password !== form.confirmPassword) {
   alert("Passwords do not match.");
   return;
@@ -43,6 +47,7 @@ if (!form.agree) {
   alert("You must agree to the Terms of Service.");
   return;
 }
+setLoading(true);
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/auth/register",
@@ -51,8 +56,13 @@ if (!form.agree) {
 
       alert(response.data.message);
     } catch (error) {
-      alert(error.response?.data?.detail || "Registration failed");
+      setErrorMessage(
+  error.response?.data?.detail || "Registration failed. Please try again."
+);
     }
+    finally {
+  setLoading(false);
+}
   };
 
   return (
@@ -71,6 +81,21 @@ if (!form.agree) {
       </p>
 
         <form onSubmit={handleSubmit}>
+          {errorMessage && (
+  <p
+    style={{
+      color: "#dc2626",
+      background: "#fef2f2",
+      border: "1px solid #fecaca",
+      padding: "10px",
+      borderRadius: "8px",
+      marginBottom: "15px",
+      fontSize: "14px",
+    }}
+  >
+    {errorMessage}
+  </p>
+)}
   <label>Full Name</label>
   <div className="input-group">
   <FaUser className="input-icon" />
@@ -163,8 +188,8 @@ if (!form.agree) {
     I agree to the Terms of Service and Privacy Policy
   </label>
 
- <button type="submit">
-  Create Account
+ <button type="submit" disabled={loading}>
+  {loading ? "Creating Account..." : "Create Account"}
 </button>
 <div
   style={{
