@@ -1,4 +1,5 @@
 import { useState } from "react";
+import logo from "../assets/logo.png";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
@@ -69,7 +70,9 @@ setLoading(true);
   <div className="auth-container">
 
     <div className="logo-section">
-      <div className="logo-box">🚀</div>
+      <div className="logo-box">
+  <img src={logo} alt="CollabIQ Logo" />
+</div>
       <h1>CollabIQ</h1>
       <p>Academic Excellence Through AI Collaboration</p>
     </div>
@@ -188,27 +191,17 @@ setLoading(true);
     I agree to the Terms of Service and Privacy Policy
   </label>
 
- <button type="submit" disabled={loading}>
+ <button
+  type="submit"
+  className="primary-button"
+  disabled={loading}
+>
   {loading ? "Creating Account..." : "Create Account"}
 </button>
-<div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    margin: "25px 0",
-  }}
->
-  <hr style={{ flex: 1 }} />
-  <span
-    style={{
-      margin: "0 10px",
-      color: "#777",
-      fontSize: "14px",
-    }}
-  >
-    Or continue with
-  </span>
-  <hr style={{ flex: 1 }} />
+<div className="divider">
+  <hr />
+  <span>Or continue with</span>
+  <hr />
 </div>
 
 <div className="social-buttons">

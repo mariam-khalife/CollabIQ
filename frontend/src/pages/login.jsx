@@ -1,3 +1,4 @@
+import logo from "../assets/logo.png";
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -52,7 +53,9 @@ setLoading(true);
   return (
   <div className="auth-container">
     <div className="logo-section">
-      <div className="logo-box">🚀</div>
+      <div className="logo-box">
+  <img src={logo} alt="CollabIQ Logo" />
+</div>
       <h1>CollabIQ</h1>
       <p>Academic Excellence Through AI Collaboration</p>
     </div>
@@ -91,24 +94,10 @@ setLoading(true);
 />
 </div>
 
-        <div
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "15px",
-    marginBottom: "8px",
-  }}
->
-  <label style={{ margin: 0 }}>Password</label>
+        <div className="password-row">
+  <label>Password</label>
 
-  <Link
-    to="/forgot-password"
-    style={{
-      color: "#4338ca",
-      fontSize: "13px",
-      textDecoration: "none",
-    }}
-  >
+  <Link to="/forgot-password" className="forgot-link">
     Forgot password?
   </Link>
 </div>
@@ -133,44 +122,27 @@ setLoading(true);
   
 </div>
 
-        <div style={{ marginTop: "15px", marginBottom: "10px" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontWeight: "normal",
-            }}
-          >
-            <input type="checkbox" style={{ width: "16px" }} />
-            Remember me
-          </label>
-        </div>
+        <div className="remember-row">
+  <label>
+    <input type="checkbox" />
+    Remember me
+  </label>
+</div>
 
-        <button type="submit" disabled={loading}>
+        <button
+  type="submit"
+  className="primary-button"
+  disabled={loading}
+>
   {loading ? "Logging in..." : "Login"}
 </button>
       </form>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          margin: "25px 0",
-        }}
-      >
-        <hr style={{ flex: 1 }} />
-        <span
-          style={{
-            margin: "0 10px",
-            color: "#777",
-            fontSize: "14px",
-          }}
-        >
-          Or continue with
-        </span>
-        <hr style={{ flex: 1 }} />
-      </div>
+      <div className="divider">
+  <hr />
+  <span>Or continue with</span>
+  <hr />
+</div>
 
       <div className="social-buttons">
         <button type="button" className="social-button">

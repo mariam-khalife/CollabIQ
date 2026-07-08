@@ -1,10 +1,12 @@
 import { useState } from "react";
+import logo from "../assets/logo.png";
 import { Link } from "react-router-dom";
 import "../styles/auth.css";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
-
+const [loading, setLoading] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -14,7 +16,9 @@ function ForgotPassword() {
   return (
     <div className="auth-container">
       <div className="logo-section">
-        <div className="logo-box">🚀</div>
+        <div className="logo-box">
+          <img src={logo} alt="CollabIQ Logo" />
+        </div>
         <h1>CollabIQ</h1>
         <p>Academic Excellence Through AI Collaboration</p>
       </div>
@@ -37,7 +41,7 @@ function ForgotPassword() {
             required
           />
 
-          <button type="submit">
+          <button type="submit" class="primary-button">
             Send Reset Link
           </button>
         </form>
