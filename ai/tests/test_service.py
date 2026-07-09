@@ -1,8 +1,10 @@
+import os
 import sys
 import uuid
 from pathlib import Path
 
 import pytest
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -21,7 +23,8 @@ from models import (  # noqa: E402
 
 from ai import service  # noqa: E402
 
-DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/collabiq"
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/collabiq")
 
 
 @pytest.fixture

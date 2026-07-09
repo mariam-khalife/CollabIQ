@@ -33,6 +33,8 @@ ai/
 
 ```bash
 pip install -r ai/requirements.txt pytest
-# test_service.py needs a running Postgres with the database/ migrations applied
+# test_service.py needs a running Postgres with the database/ migrations applied.
+# Set DATABASE_URL in a .env file (or the environment) to point at your own
+# Postgres instance - each teammate's user/password/db name can differ.
 python -m pytest ai/tests/ -v
 ```
