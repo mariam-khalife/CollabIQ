@@ -142,3 +142,67 @@ def test_never_returns_more_than_five_suggestions(db):
 def test_generate_match_suggestions_raises_for_unknown_team(db):
     with pytest.raises(ValueError):
         service.generate_match_suggestions(db, uuid.uuid4(), [], count=5)
+
+
+def test_generate_project_recommendations_persists_llm_output(db, monkeypatch):
+    from ai.schemas import ProjectIdea
+
+    leader = _make_user(db, "Leader", "leader-recs@example.com")
+    skill = Skill(name="FastAPI", category="Backend")
+    db.add(skill)
+    db.flush()
+    db.add(UserSkill(user_id=leader.id, skill_id=skill.id, proficiency_level="advanced"))
+
+    team = Team(team_name="Team R", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    captured = {}
+
+    def fake_generate(skills, interests, count=3):
+        captured["skills"] = skills
+        return [ProjectIdea(title="Budget Tracker", description="A fintech budgeting app", confidence_score=0.9)]
+
+    monkeypatch.setattr(service.recommendations, "generate_project_ideas", fake_generate)
+
+    recs = service.generate_project_recommendations(db, team.id)
+
+    assert len(recs) == 1
+    assert recs[0].title == "Budget Tracker"
+    assert "FastAPI" in captured["skills"]  # leader's skills reach the prompt
+
+
+def test_generate_project_recommendations_replaces_previous_results(db, monkeypatch):
+    from ai.schemas import ProjectIdea
+    from models import ProjectRecommendation
+
+    leader = _make_user(db, "Leader", "leader-recs2@example.com")
+    team = Team(team_name="Team R2", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, count=3: [
+            ProjectIdea(title="Idea A", description="first run", confidence_score=0.8)
+        ],
+    )
+    service.generate_project_recommendations(db, team.id)
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, count=3: [
+            ProjectIdea(title="Idea B", description="second run", confidence_score=0.7)
+        ],
+    )
+    service.generate_project_recommendations(db, team.id)
+
+    rows = db.query(ProjectRecommendation).filter_by(team_id=team.id).all()
+    assert [row.title for row in rows] == ["Idea B"]
+
+
+def test_generate_project_recommendations_raises_for_unknown_team(db):
+    with pytest.raises(ValueError):
+        service.generate_project_recommendations(db, uuid.uuid4())

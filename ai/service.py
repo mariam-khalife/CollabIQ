@@ -7,18 +7,21 @@ if str(DATABASE_DIR) not in sys.path:
     sys.path.insert(0, str(DATABASE_DIR))
 
 from models import (  # noqa: E402
+    Interest,
     MatchSuggestion,
+    ProjectRecommendation,
     Role,
     Skill,
     Team,
     TeamInvitation,
     TeamMember,
     User,
+    UserInterest,
     UserSkill,
 )
 from sqlalchemy.orm import Session  # noqa: E402
 
-from . import matching  # noqa: E402
+from . import matching, recommendations  # noqa: E402
 
 # A team leader is shown at most this many candidates per matching run.
 MAX_SUGGESTIONS = 5
@@ -75,3 +78,35 @@ def generate_match_suggestions(
 
     db.commit()
     return suggestions
+
+
+def generate_project_recommendations(db: Session, team_id: UUID, count: int = 3) -> list[ProjectRecommendation]:
+    team = db.get(Team, team_id)
+    if team is None:
+        raise ValueError(f"Team {team_id} not found")
+
+    member_user_ids = [row.user_id for row in db.query(TeamMember).filter_by(team_id=team_id)]
+    member_user_ids.append(team.leader_id)
+
+    skill_ids = {row.skill_id for row in db.query(UserSkill).filter(UserSkill.user_id.in_(member_user_ids))}
+    skills = [row.name for row in db.query(Skill).filter(Skill.id.in_(skill_ids))]
+
+    interest_ids = {row.interest_id for row in db.query(UserInterest).filter(UserInterest.user_id.in_(member_user_ids))}
+    interests = [row.name for row in db.query(Interest).filter(Interest.id.in_(interest_ids))]
+
+    ideas = recommendations.generate_project_ideas(skills, interests, count=count)
+
+    db.query(ProjectRecommendation).filter_by(team_id=team_id).delete()
+    rows = []
+    for idea in ideas:
+        row = ProjectRecommendation(
+            team_id=team_id,
+            title=idea.title,
+            description=idea.description,
+            confidence_score=idea.confidence_score,
+        )
+        db.add(row)
+        rows.append(row)
+
+    db.commit()
+    return rows
