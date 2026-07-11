@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/dashboard.css';
 import {
@@ -9,122 +9,142 @@ import {
 } from 'lucide-react';
 
 export default function AcademicDashboard() {
+  // 1. Interactive States
+  const [search, setSearch] = useState("");
+  const [progress, setProgress] = useState(78);
+  const [readiness, setReadiness] = useState(92);
+  const [reputation, setReputation] = useState(842);
+
+  // 2. Dynamic Data States
+  const [teamMembers, setTeamMembers] = useState([
+    {
+      name: "Liam Vance",
+      role: "Data Scientist",
+      image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Elena Rossi",
+      role: "UI/UX Designer",
+      image: "https://images.unsplash.com/photo-1619895862022-09114b41f16f?w=500&auto=format&fit=crop&q=60",
+    },
+    {
+      name: "Marcus Thorne",
+      role: "AI Engineer",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop&q=60",
+    },
+  ]);
+
+  const [deadlines, setDeadlines] = useState([
+    { id: 1, month: "Oct", day: "24", title: "Data Set Submission", location: "Research Hall", status: "Due in 2 days" },
+    { id: 2, month: "Oct", day: "28", title: "UI Wireframe Review", location: "Zoom", status: "Weekly Sync" },
+    { id: 3, month: "Nov", day: "02", title: "Academic Poster Draft", location: "Submission Portal", status: "Open" }
+  ]);
+
+  const [activities, setActivities] = useState([
+    { id: 1, user: "Liam Vance", action: "uploaded", target: "Research_Paper_v2.pdf", time: "14 minutes ago", type: "file" },
+    { id: 2, user: "System", action: "automatically matched your project with", target: "3 Potential Mentors", time: "2 hours ago", type: "system" },
+    { id: 3, user: "Elena Rossi", action: "started a new discussion thread:", target: '"Typography choices for the final presentation"', time: "4 hours ago", type: "chat" }
+  ]);
+
+  // 3. Action Handlers
+  const handleInviteCollaborator = () => {
+    const name = prompt("Enter collaborator's name:");
+    const role = prompt("Enter collaborator's role (e.g., Frontend Developer):");
+    
+    if (name && role) {
+      const newMember = {
+        name,
+        role,
+        image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80"
+      };
+      setTeamMembers([...teamMembers, newMember]);
+      logActivity(name, "joined the team as", role, "Just now", "system");
+      setReadiness(prev => Math.min(prev + 3, 100));
+    }
+  };
+
+  const logActivity = (user, action, target, time, type) => {
+    const newActivity = { id: Date.now(), user, action, target, time, type };
+    setActivities([newActivity, ...activities]);
+  };
+
+  const handleCompleteDeadline = (id, title) => {
+    // Remove the completed deadline from the list
+    const remainingDeadlines = deadlines.filter(d => d.id !== id);
+    setDeadlines(remainingDeadlines);
+    
+    // Log activity and boost metrics
+    logActivity("Sarah Chen", "completed the task:", title, "Just now", "file");
+    setReputation(prev => Math.min(prev + 15, 1000));
+    
+    // Corrected Step Logic: Hits exactly 100% on final clearance
+    if (remainingDeadlines.length === 2) {
+      setProgress(85);
+    } else if (remainingDeadlines.length === 1) {
+      setProgress(93);
+    } else if (remainingDeadlines.length === 0) {
+      setProgress(100); // 100% finished!
+    }
+  };
+
+  // 4. Search Filter Logic
+  const filteredTeam = teamMembers.filter(member => 
+    member.name.toLowerCase().includes(search.toLowerCase()) ||
+    member.role.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased">
       
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-6 shrink-0">
-        <div className="space-y-8">
-          {/* Logo Area */}
-          <div>
-            <h1 className="text-xl font-bold text-[#1E293B] flex items-center gap-1">
-              CollabIQ
-            </h1>
-            <p className="text-[11px] font-medium text-slate-400 tracking-wider mt-0.5">
-              Academic Excellence
-            </p>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="space-y-1">
-            <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-[14px] font-semibold rounded-xl bg-[#EEF2FF] text-[#4f46E5]">
-              <LayoutDashboard size={18}/> Dashboard </Link>
-            
-            <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <User size={18} /> My Profile
-            </Link>
-            <Link to="/build-team" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Plus size={18} /> Build New Team
-            </Link>
-            <Link to="/ai-matching" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Cpu size={18} /> AI Team Matching
-            </Link>
-            <Link to="/team-management" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Users size={18} /> Team Management
-            </Link>
-            <Link to="/ai-suggestions" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Lightbulb size={18} /> AI Project Suggestions
-            </Link>
-            <Link to="/my-projects" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <FolderGit2 size={18} /> My Project
-            </Link>
-            <Link to="/notifications" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Bell size={18} /> Notifications
-            </Link>
-            <Link to="/reputation" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Award size={18} /> Reputation
-            </Link>
-            <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-[14px] font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">
-              <Settings size={18} /> Settings
-            </Link>
-          </nav>
-        </div>
-
-        {/* User Profile Footer */}
-        <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
-          <img 
-            src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&auto=format&fit=crop&q=60"
-            alt="Ibrahim Sherri" 
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div>
-            <h4 className="text-sm font-bold text-slate-800">Alex Rivera</h4>
-            <p className="text-xs text-slate-400">Computer Science</p>
-          </div>
-        </div>
-      </aside>
-      
       {/* MAIN CONTENT WINDOW */}
       <main className="flex-1 flex flex-col relative min-w-0 h-screen overflow-hidden">
-        {/* TOP NAVBAR */}
-        <header className="h-16 border-b border-slate-200 bg-white px-8 flex items-center justify-between shrink-0">
-          {/* Search Box */}
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Search projects, teams, or research..."
-              className="w-full bg-[#F1F5F9] pl-10 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-600 placeholder-slate-400"
-            />
-          </div>
-          {/* Action Row */}
-          <div className="flex items-center gap-4">
-            <button className="relative p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
-            </button>
-            <button className="p-1.5 text-slate-600 hover:bg-slate-50 rounded-lg">
-              <HelpCircle size={20} />
-            </button>
-            <div className="h-5 w-px bg-slate-200 mx-1"></div>
-            <button className="bg-[#312E81] text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-indigo-900 transition-colors">
-              + New Team
-            </button>
-          </div>
-        </header>
-
+        
         {/* CONTAINER VIEWPORTS */}
         <div className="p-8 space-y-6 overflow-y-auto flex-1">
           
           {/* CONTENT TITLE SECTION */}
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start gap-4 flex-wrap">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Academic Dashboard</h2>
               <p className="text-slate-500 text-sm mt-0.5">
                 Welcome back, Sarah. Your team is currently <span className="text-emerald-600 font-bold italic">Top Ranked</span> this semester.
               </p>
             </div>
-            <div className="flex gap-3">
-              <button className="border border-indigo-200 text-indigo-600 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white hover:bg-indigo-50/50 transition-colors">
-                View Project
-              </button>
-              <button className="bg-[#312E81] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-900 transition-colors">
-                Build Team
-              </button>
+
+            <div className="flex items-center gap-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Search team..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-48 pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm text-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => alert("Opening Project Workspace...")}
+                  className="border border-indigo-200 text-indigo-600 text-xs font-semibold px-4 py-2.5 rounded-xl bg-white hover:bg-indigo-50/50 transition-colors"
+                >
+                  View Project
+                </button>
+                <button 
+                  onClick={handleInviteCollaborator}
+                  className="bg-[#312E81] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-indigo-900 transition-colors"
+                >
+                  Build Team
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* ROW 1: ACTIVE RESEARCH GRID  */}
+          {/* ROW 1: ACTIVE RESEARCH GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Active Research Card */}
@@ -139,22 +159,24 @@ export default function AcademicDashboard() {
                 <h3 className="text-xl font-bold text-slate-900 mt-4 leading-snug">
                   AI-Driven Neural Pattern Recognition
                 </h3>
+                
                 {/* Progress Tracking */}
                 <div className="mt-6">
                   <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
                     <span>Overall Progress</span>
-                    <span>78%</span>
+                    <span>{progress}%</span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-indigo-600 h-full rounded-full w-[78%]"></div>
+                    <div className="bg-indigo-600 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
                   </div>
                 </div>
               </div>
+
               {/* Card Meta Stats Footer */}
               <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100 text-xs">
                 <div>
                   <p className="text-slate-400 font-medium">Milestone</p>
-                  <p className="font-bold text-slate-800 mt-0.5">Phase 3: Testing</p>
+                  <p className="font-bold text-slate-800 mt-0.5">{progress >= 100 ? "Finished 🎉" : "Phase 3: Testing"}</p>
                 </div>
                 <div>
                   <p className="text-slate-400 font-medium">Priority</p>
@@ -171,34 +193,25 @@ export default function AcademicDashboard() {
             <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
               <div>
                 <h4 className="text-[11px] uppercase tracking-wider font-bold text-slate-400">The Synapse Team</h4>
-                <div className="space-y-3.5 mt-4">
-                  {/* Member Node */}
-                  <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80" alt="" className="w-8 h-8 rounded-full object-cover" />
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-800">Liam Vance</h5>
-                      <p className="text-[10px] text-slate-400 font-medium">Data Scientist</p>
+                <div className="space-y-3.5 mt-4 max-h-[160px] overflow-y-auto pr-1">
+                  {filteredTeam.map((member, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <img src={member.image} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-800">{member.name}</h5>
+                        <p className="text-[10px] text-slate-400 font-medium">{member.role}</p>
+                      </div>
                     </div>
-                  </div>
-                  {/* Member Node */}
-                  <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1619895862022-09114b41f16f?w=500&auto=format&fit=crop&q=60" alt="" className="w-8 h-8 rounded-full object-cover" />
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-800">Elena Rossi</h5>
-                      <p className="text-[10px] text-slate-400 font-medium">UI/UX Designer</p>
-                    </div>
-                  </div>
-                  {/* Member Node */}
-                  <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500&auto=format&fit=crop&q=60" alt="" className="w-8 h-8 rounded-full object-cover" />
-                    <div>
-                      <h5 className="text-xs font-bold text-slate-800">Marcus Thorne</h5>
-                      <p className="text-[10px] text-slate-400 font-medium">AI Engineer</p>
-                    </div>
-                  </div>
+                  ))}
+                  {filteredTeam.length === 0 && (
+                    <p className="text-[11px] text-slate-400 italic">No members match search.</p>
+                  )}
                 </div>
               </div>
-              <button className="w-full mt-4 border border-dashed border-slate-300 hover:bg-slate-50 transition-colors text-[11px] font-bold text-slate-500 py-2 rounded-xl flex items-center justify-center gap-1.5">
+              <button 
+                onClick={handleInviteCollaborator}
+                className="w-full mt-4 border border-dashed border-slate-300 hover:bg-slate-50 transition-colors text-[11px] font-bold text-slate-500 py-2 rounded-xl flex items-center justify-center gap-1.5"
+              >
                 <Plus size={12} /> Invite Collaborator
               </button>
             </div>
@@ -207,20 +220,26 @@ export default function AcademicDashboard() {
             <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col items-center justify-between text-center">
               <h4 className="text-[11px] uppercase tracking-wider font-bold text-slate-400 self-start">Team Readiness</h4>
               
-              {/* Radial Dial Simulation */}
-              <div className="relative w-28 h-28 flex items-center justify-center mt-2">
+              <div 
+                className="relative w-28 h-28 flex items-center justify-center mt-2 cursor-pointer group"
+                onClick={() => setReadiness(prev => (prev >= 100 ? 70 : prev + 2))}
+              >
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <path className="text-slate-100" strokeWidth="2.5" stroke="currentColor" fill="transparent" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path className="text-indigo-600" strokeDasharray="92, 100" strokeWidth="2.5" strokeLinecap="round" stroke="currentColor" fill="transparent" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className="text-indigo-600 transition-all duration-500" strokeDasharray={`${readiness}, 100`} strokeWidth="2.5" strokeLinecap="round" stroke="currentColor" fill="transparent" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div className="absolute flex flex-col items-center">
-                  <span className="text-2xl font-black text-slate-800">92</span>
-                  <span className="text-[10px] font-medium text-slate-400 -mt-1">Optimal</span>
+                  <span className="text-2xl font-black text-slate-800">{readiness}</span>
+                  <span className="text-[10px] font-medium text-slate-400 -mt-1">{readiness > 90 ? "Optimal" : "Stable"}</span>
                 </div>
               </div>
 
               <p className="text-[11px] text-slate-400 leading-normal max-w-[180px] mt-2">
-                AI suggests your team is ready for the <span className="text-indigo-600 font-bold">Final Peer Review.</span>
+                {readiness > 90 ? (
+                  <span>AI suggests your team is ready for the <span className="text-indigo-600 font-bold">Final Peer Review.</span></span>
+                ) : (
+                  <span>Gathering more resources to optimize your review roadmap.</span>
+                )}
               </p>
             </div>
 
@@ -237,39 +256,32 @@ export default function AcademicDashboard() {
               </div>
               
               <div className="space-y-4">
-                {/* Deadline item */}
-                <div className="flex gap-3 items-start">
-                  <div className="bg-rose-50 text-rose-600 flex flex-col items-center justify-center p-2 rounded-xl text-center shrink-0 min-w-[48px]">
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Oct</span>
-                    <span className="text-base font-bold leading-none mt-0.5">24</span>
+                {deadlines.map((deadline) => (
+                  <div key={deadline.id} className="flex gap-3 items-start justify-between group">
+                    <div className="flex gap-3 items-start">
+                      <div className={`flex flex-col items-center justify-center p-2 rounded-xl text-center shrink-0 min-w-[48px] ${
+                        deadline.month === 'Oct' ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'
+                      }`}>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">{deadline.month}</span>
+                        <span className="text-base font-bold leading-none mt-0.5">{deadline.day}</span>
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-800">{deadline.title}</h5>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{deadline.status} • {deadline.location}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleCompleteDeadline(deadline.id, deadline.title)}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-emerald-600 transition-all p-1"
+                      title="Mark complete"
+                    >
+                      <CheckCircle2 size={14} />
+                    </button>
                   </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-800">Data Set Submission</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Due in 2 days • Research Hall</p>
-                  </div>
-                </div>
-                {/* Deadline item */}
-                <div className="flex gap-3 items-start">
-                  <div className="bg-indigo-50 text-indigo-600 flex flex-col items-center justify-center p-2 rounded-xl text-center shrink-0 min-w-[48px]">
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Oct</span>
-                    <span className="text-base font-bold leading-none mt-0.5">28</span>
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-800">UI Wireframe Review</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Weekly Sync • Zoom</p>
-                  </div>
-                </div>
-                {/* Deadline item */}
-                <div className="flex gap-3 items-start">
-                  <div className="bg-blue-50 text-blue-600 flex flex-col items-center justify-center p-2 rounded-xl text-center shrink-0 min-w-[48px]">
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Nov</span>
-                    <span className="text-base font-bold leading-none mt-0.5">02</span>
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-800">Academic Poster Draft</h5>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Submission Portal</p>
-                  </div>
-                </div>
+                ))}
+                {deadlines.length === 0 && (
+                  <p className="text-xs text-slate-400 italic text-center py-4">All deadlines resolved! 🎉</p>
+                )}
               </div>
             </div>
 
@@ -277,34 +289,35 @@ export default function AcademicDashboard() {
             <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
               <div className="flex justify-between items-center mb-5">
                 <h4 className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Recent Activity</h4>
-                <a href="#" className="text-[11px] font-bold text-indigo-600 hover:underline">View All</a>
+                <button 
+                  onClick={() => setActivities([])} 
+                  className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors"
+                >
+                  Clear Logs
+                </button>
               </div>
 
-              <div className="space-y-4">
-                {/* Activity node */}
-                <div className="flex gap-3 items-start">
-                  <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600 shrink-0"><FileText size={14} /></div>
-                  <div className="text-xs leading-normal">
-                    <span className="font-bold text-slate-800">Liam Vance</span> uploaded <span className="text-indigo-600 font-bold underline cursor-pointer">Research_Paper_v2.pdf</span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">14 minutes ago</p>
+              <div className="space-y-4 max-h-[180px] overflow-y-auto pr-1">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex gap-3 items-start">
+                    <div className={`p-1.5 rounded-lg shrink-0 ${
+                      activity.type === 'file' ? 'bg-indigo-50 text-indigo-600' :
+                      activity.type === 'system' ? 'bg-emerald-50 text-emerald-600' : 'bg-[#EEF2FF] text-indigo-500'
+                    }`}>
+                      {activity.type === 'file' && <FileText size={14} />}
+                      {activity.type === 'system' && <CheckCircle2 size={14} />}
+                      {activity.type === 'chat' && <MessageSquare size={14} />}
+                    </div>
+                    <div className="text-xs leading-normal">
+                      <span className="font-bold text-slate-800">{activity.user}</span> {activity.action}{' '}
+                      <span className="text-indigo-600 font-bold underline cursor-pointer">{activity.target}</span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{activity.time}</p>
+                    </div>
                   </div>
-                </div>
-                {/* Activity node */}
-                <div className="flex gap-3 items-start">
-                  <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600 shrink-0"><CheckCircle2 size={14} /></div>
-                  <div className="text-xs leading-normal">
-                    <span className="font-bold text-slate-800">System</span> automatically matched your project with <span className="text-indigo-600 font-bold cursor-pointer">3 Potential Mentors</span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">2 hours ago</p>
-                  </div>
-                </div>
-                {/* Activity node */}
-                <div className="flex gap-3 items-start">
-                  <div className="p-1.5 bg-[#EEF2FF] rounded-lg text-indigo-500 shrink-0"><MessageSquare size={14} /></div>
-                  <div className="text-xs leading-normal">
-                    <span className="font-bold text-slate-800">Elena Rossi</span> started a new discussion thread: <span className="italic text-slate-600 font-medium">"Typography choices for the final presentation"</span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">4 hours ago</p>
-                  </div>
-                </div>
+                ))}
+                {activities.length === 0 && (
+                  <p className="text-xs text-slate-400 italic text-center py-4">No recent history.</p>
+                )}
               </div>
             </div>
 
@@ -313,7 +326,7 @@ export default function AcademicDashboard() {
               <div>
                 <h4 className="text-[11px] uppercase tracking-wider font-bold text-slate-400">Reputation Score</h4>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-800 tracking-tight">842</span>
+                  <span className="text-4xl font-black text-slate-800 tracking-tight">{reputation}</span>
                   <span className="text-xs text-slate-400 font-medium">/ 1000</span>
                 </div>
 
@@ -327,9 +340,9 @@ export default function AcademicDashboard() {
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 font-medium mt-4">
-                <span>Last Week</span>
+                <span>Performance Indicator</span>
                 <span className="text-emerald-600 font-bold flex items-center gap-0.5">
-                  <span className="text-[12px] font-normal">↗</span> +48 pts
+                  <span className="text-[12px] font-normal">↗</span> High
                 </span>
               </div>
             </div>
