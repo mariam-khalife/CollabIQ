@@ -3,8 +3,12 @@
 Usage:
     python database/seed.py
 
-Reads DATABASE_URL from .env (or the environment). Safe to re-run: catalog rows
-are matched by name and users by email, so existing rows are reused, not duplicated.
+Reads DATABASE_URL from .env (or the environment). Safe to re-run: rows are
+matched by their natural keys (name/email), so existing rows are reused and any
+missing skills/interests are backfilled instead of duplicated.
+
+Every sample user can log in with the demo password below - local development
+only, never reuse it for real accounts.
 """
 
 import os
@@ -12,12 +16,18 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from passlib.context import CryptContext
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from models import Interest, Role, Skill, Team, User, UserInterest, UserSkill  # noqa: E402
+
+# Same hashing scheme as backend/app/core/security.py, so sample accounts can
+# actually log in through the real /auth/login endpoint.
+DEMO_PASSWORD = "Demo123!"
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ROLES = [
     ("Frontend Developer", "Builds the user interface with React and Tailwind CSS"),
@@ -111,6 +121,7 @@ def seed(db: Session) -> None:
         interests_by_name[name] = interest
         created["interests"] += was_created
 
+    demo_password_hash = _pwd_context.hash(DEMO_PASSWORD)
     users_by_email = {}
     for full_name, email, availability, experience_level, user_skills, user_interests in USERS:
         user, was_created = get_or_create(
@@ -119,32 +130,35 @@ def seed(db: Session) -> None:
             email=email,
             defaults={
                 "full_name": full_name,
-                # Not a real credential - sample accounts only. The backend's
-                # register endpoint is what produces real bcrypt hashes.
-                "password_hash": "sample-data-not-a-real-login",
+                "password_hash": demo_password_hash,
                 "availability": availability,
                 "experience_level": experience_level,
             },
         )
         users_by_email[email] = user
         created["users"] += was_created
-        if not was_created:
-            continue
+        # Backfill skills/interests even for users that already existed, so a
+        # partially seeded database converges on the full sample data.
         for skill_name, level in user_skills.items():
-            db.add(UserSkill(user_id=user.id, skill_id=skills_by_name[skill_name].id, proficiency_level=level))
+            get_or_create(
+                db,
+                UserSkill,
+                user_id=user.id,
+                skill_id=skills_by_name[skill_name].id,
+                defaults={"proficiency_level": level},
+            )
         for interest_name in user_interests:
-            db.add(UserInterest(user_id=user.id, interest_id=interests_by_name[interest_name].id))
+            get_or_create(db, UserInterest, user_id=user.id, interest_id=interests_by_name[interest_name].id)
 
     team_name, leader_email = DEMO_TEAM
-    _, was_created = get_or_create(
-        db, Team, team_name=team_name, defaults={"leader_id": users_by_email[leader_email].id}
-    )
+    _, was_created = get_or_create(db, Team, team_name=team_name, leader_id=users_by_email[leader_email].id)
     created["teams"] += was_created
 
     db.commit()
     print("Seed complete:")
     for kind, count in created.items():
         print(f"  {kind}: {count} created")
+    print(f'All sample users log in with the demo password "{DEMO_PASSWORD}" (local development only).')
 
 
 if __name__ == "__main__":
