@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserResponse, UserUpdate
+from app.schemas.user import UserResponse, UserUpdate, PublicUserResponse
 
 
 router = APIRouter(
@@ -50,11 +50,6 @@ def get_current_user(
     return user
 
 
-@router.get("/me", response_model=UserResponse)
-def get_my_profile(current_user: User = Depends(get_current_user)):
-    return current_user
-
-
 @router.put("/me", response_model=UserResponse)
 def update_my_profile(
     user_data: UserUpdate,
@@ -73,30 +68,7 @@ def update_my_profile(
     return current_user
 
 
-@router.put("/{user_id}", response_model=UserResponse)
-def update_user_by_id(
-    user_id: UUID,
-    user_data: UserUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own profile"
-        )
-
-    update_data = user_data.model_dump(exclude_unset=True)
-
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-
-    db.commit()
-    db.refresh(current_user)
-
-    return current_user
-
-@router.get("/{user_id}", response_model=UserResponse)
+@router.get("/{user_id}", response_model=PublicUserResponse)
 def get_user_by_id(user_id: UUID, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
 

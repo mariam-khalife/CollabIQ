@@ -25,3 +25,15 @@ class UserUpdate(BaseModel):
     bio: str | None = None
     availability: str | None = None
     experience_level: str | None = None
+
+class PublicUserResponse(BaseModel):
+    id: UUID
+    full_name: str
+    university: str | None = None
+    bio: str | None = None
+    availability: str | None = None
+    experience_level: str | None = None
+
+    model_config = {
+        "from_attributes": True
+    }

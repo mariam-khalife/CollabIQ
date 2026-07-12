@@ -32,3 +32,9 @@ class TeamMemberResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class TeamReadinessResponse(BaseModel):
+    team_id: UUID
+    readiness_score: float
+    label: str
+    member_count: int
