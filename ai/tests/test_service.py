@@ -229,6 +229,100 @@ def test_empty_technologies_from_llm_is_rejected(db):
         _idea("Bad Idea", technologies=[])
 
 
+def test_overlong_title_from_llm_is_rejected(db):
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        _idea("X" * 300)  # DB column is String(255)
+
+
+def test_malformed_llm_envelope_is_rejected(db):
+    import pydantic
+
+    from ai.schemas import ProjectIdeaList
+
+    with pytest.raises(pydantic.ValidationError):
+        ProjectIdeaList.model_validate_json('{"ideas": []}')  # wrong key
+    with pytest.raises(pydantic.ValidationError):
+        ProjectIdeaList.model_validate_json('["just", "a", "list"]')  # wrong shape
+
+
+def test_accepted_recommendation_survives_regeneration(db, monkeypatch):
+    from models import Project, ProjectRecommendation
+
+    leader = _make_user(db, "Leader", "leader-accepted@example.com")
+    team = Team(team_name="Team Accepted", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    accepted = ProjectRecommendation(
+        team_id=team.id, title="Chosen One", description="the accepted idea", confidence_score=0.9
+    )
+    db.add(accepted)
+    db.flush()
+    db.add(Project(team_id=team.id, recommendation_id=accepted.id, title="Chosen One", description="d"))
+    db.flush()
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, experience_levels=None, count=5: [_idea("Fresh Idea")],
+    )
+
+    # Before the fix this raised IntegrityError: the bulk delete violated
+    # projects.recommendation_id's NOT NULL foreign key.
+    recs = service.generate_project_recommendations(db, team.id)
+
+    titles = {r.title for r in db.query(ProjectRecommendation).filter_by(team_id=team.id)}
+    assert "Chosen One" in titles  # the accepted one survives
+    assert "Fresh Idea" in titles  # the new ones arrive
+    assert [r.title for r in recs] == ["Fresh Idea"]
+
+
+def test_excess_ideas_from_llm_are_capped(db, monkeypatch):
+    leader = _make_user(db, "Leader", "leader-cap2@example.com")
+    team = Team(team_name="Team Cap2", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, experience_levels=None, count=5: [_idea(f"Idea {i}") for i in range(12)],
+    )
+
+    recs = service.generate_project_recommendations(db, team.id, count=50)
+
+    assert len(recs) == service.MAX_RECOMMENDATIONS
+
+
+def test_empty_llm_answer_keeps_previous_recommendations(db, monkeypatch):
+    from models import ProjectRecommendation
+
+    leader = _make_user(db, "Leader", "leader-empty@example.com")
+    team = Team(team_name="Team Empty", leader_id=leader.id)
+    db.add(team)
+    db.flush()
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, experience_levels=None, count=5: [_idea("Existing Idea")],
+    )
+    service.generate_project_recommendations(db, team.id)
+
+    monkeypatch.setattr(
+        service.recommendations,
+        "generate_project_ideas",
+        lambda skills, interests, experience_levels=None, count=5: [],
+    )
+    with pytest.raises(RuntimeError):
+        service.generate_project_recommendations(db, team.id)
+
+    titles = [r.title for r in db.query(ProjectRecommendation).filter_by(team_id=team.id)]
+    assert titles == ["Existing Idea"]  # cache untouched by the failed run
+
+
 def test_generate_project_recommendations_raises_for_unknown_team(db):
     with pytest.raises(ValueError):
         service.generate_project_recommendations(db, uuid.uuid4())

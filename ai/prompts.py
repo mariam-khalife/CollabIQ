@@ -13,8 +13,9 @@ Respond with a JSON object of the form:
 "required_technologies": ["...", "..."], "confidence_score": 0.0}}]}}
 
 Rules for each field:
-- difficulty_level must be exactly one of: "beginner", "intermediate", "advanced".
-- required_technologies is a list of the concrete technologies the project needs
+- title must be at most 255 characters.
+- difficulty_level must be exactly one of: {difficulty_values}.
+- required_technologies is a list of short, concrete technology names the project needs
   (e.g. ["React", "FastAPI", "PostgreSQL"]), preferring ones the team already knows.
 - confidence_score must be a number between 0.0 and 1.0 reflecting how well the idea
   fits the team's skills, interests, and experience.

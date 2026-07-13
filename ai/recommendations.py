@@ -10,21 +10,25 @@ The defaults target Google Gemini's free tier; switching to OpenAI, Groq, or
 GitHub Models only requires changing these three variables.
 """
 
-import json
 import os
 import time
 from typing import Callable, TypeVar
 
 from dotenv import load_dotenv
-from openai import OpenAI, RateLimitError
+from openai import APIConnectionError, InternalServerError, OpenAI, RateLimitError
+
+from models.constants import DIFFICULTY_LEVELS
 
 from . import prompts
-from .schemas import ProjectIdea
+from .schemas import ProjectIdea, ProjectIdeaList
 
 T = TypeVar("T")
 
 DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 DEFAULT_MODEL = "gemini-2.5-flash"
+
+# Transient provider failures worth retrying; anything else fails fast.
+TRANSIENT_ERRORS = (RateLimitError, APIConnectionError, InternalServerError)
 
 _client: OpenAI | None = None
 
@@ -48,7 +52,7 @@ def _call_with_retry(fn: Callable[[], T], *, max_retries: int = 3, base_delay: f
     for attempt in range(max_retries):
         try:
             return fn()
-        except RateLimitError:
+        except TRANSIENT_ERRORS:
             if attempt == max_retries - 1:
                 raise
             time.sleep(base_delay * (2**attempt))
@@ -62,10 +66,11 @@ def generate_project_ideas(
         skills=", ".join(skills) or "none listed",
         interests=", ".join(interests) or "none listed",
         experience_levels=", ".join(experience_levels or []) or "not specified",
+        difficulty_values=", ".join(f'"{level}"' for level in DIFFICULTY_LEVELS),
         count=count,
     )
 
-    def _request() -> str:
+    def _request() -> str | None:
         response = _get_client().chat.completions.create(
             model=_get_model(),
             messages=[{"role": "user", "content": prompt}],
@@ -73,5 +78,10 @@ def generate_project_ideas(
         )
         return response.choices[0].message.content
 
-    data = json.loads(_call_with_retry(_request))
-    return [ProjectIdea(**item) for item in data["projects"]]
+    content = _call_with_retry(_request)
+    if not content:
+        raise RuntimeError("LLM returned an empty response (possibly blocked by a safety filter)")
+
+    # Validates the whole envelope in one place: shape, field types, difficulty
+    # vocabulary, and column length limits - nothing unvalidated reaches the caller.
+    return ProjectIdeaList.model_validate_json(content).projects
