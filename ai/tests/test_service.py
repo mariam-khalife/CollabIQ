@@ -144,10 +144,21 @@ def test_generate_match_suggestions_raises_for_unknown_team(db):
         service.generate_match_suggestions(db, uuid.uuid4(), [], count=5)
 
 
-def test_generate_project_recommendations_persists_llm_output(db, monkeypatch):
+def _idea(title, description="desc", difficulty="intermediate", technologies=None, confidence=0.9):
     from ai.schemas import ProjectIdea
 
+    return ProjectIdea(
+        title=title,
+        description=description,
+        difficulty_level=difficulty,
+        required_technologies=technologies if technologies is not None else ["React", "FastAPI"],
+        confidence_score=confidence,
+    )
+
+
+def test_generate_project_recommendations_persists_llm_output(db, monkeypatch):
     leader = _make_user(db, "Leader", "leader-recs@example.com")
+    leader.experience_level = "advanced"
     skill = Skill(name="FastAPI", category="Backend")
     db.add(skill)
     db.flush()
@@ -159,9 +170,11 @@ def test_generate_project_recommendations_persists_llm_output(db, monkeypatch):
 
     captured = {}
 
-    def fake_generate(skills, interests, count=3):
+    def fake_generate(skills, interests, experience_levels=None, count=5):
         captured["skills"] = skills
-        return [ProjectIdea(title="Budget Tracker", description="A fintech budgeting app", confidence_score=0.9)]
+        captured["experience_levels"] = experience_levels
+        captured["count"] = count
+        return [_idea("Budget Tracker", technologies=["FastAPI", "PostgreSQL"], difficulty="advanced")]
 
     monkeypatch.setattr(service.recommendations, "generate_project_ideas", fake_generate)
 
@@ -169,11 +182,14 @@ def test_generate_project_recommendations_persists_llm_output(db, monkeypatch):
 
     assert len(recs) == 1
     assert recs[0].title == "Budget Tracker"
+    assert recs[0].difficulty_level == "advanced"
+    assert recs[0].required_technologies == ["FastAPI", "PostgreSQL"]
     assert "FastAPI" in captured["skills"]  # leader's skills reach the prompt
+    assert captured["experience_levels"] == ["advanced"]  # experience feeds the prompt
+    assert captured["count"] == 5  # sprint requirement: 5 ideas by default
 
 
 def test_generate_project_recommendations_replaces_previous_results(db, monkeypatch):
-    from ai.schemas import ProjectIdea
     from models import ProjectRecommendation
 
     leader = _make_user(db, "Leader", "leader-recs2@example.com")
@@ -184,23 +200,33 @@ def test_generate_project_recommendations_replaces_previous_results(db, monkeypa
     monkeypatch.setattr(
         service.recommendations,
         "generate_project_ideas",
-        lambda skills, interests, count=3: [
-            ProjectIdea(title="Idea A", description="first run", confidence_score=0.8)
-        ],
+        lambda skills, interests, experience_levels=None, count=5: [_idea("Idea A")],
     )
     service.generate_project_recommendations(db, team.id)
 
     monkeypatch.setattr(
         service.recommendations,
         "generate_project_ideas",
-        lambda skills, interests, count=3: [
-            ProjectIdea(title="Idea B", description="second run", confidence_score=0.7)
-        ],
+        lambda skills, interests, experience_levels=None, count=5: [_idea("Idea B")],
     )
     service.generate_project_recommendations(db, team.id)
 
     rows = db.query(ProjectRecommendation).filter_by(team_id=team.id).all()
     assert [row.title for row in rows] == ["Idea B"]
+
+
+def test_invalid_difficulty_from_llm_is_rejected(db):
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        _idea("Bad Idea", difficulty="impossible")
+
+
+def test_empty_technologies_from_llm_is_rejected(db):
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        _idea("Bad Idea", technologies=[])
 
 
 def test_generate_project_recommendations_raises_for_unknown_team(db):

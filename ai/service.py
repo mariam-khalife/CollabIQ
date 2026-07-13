@@ -80,7 +80,7 @@ def generate_match_suggestions(
     return suggestions
 
 
-def generate_project_recommendations(db: Session, team_id: UUID, count: int = 3) -> list[ProjectRecommendation]:
+def generate_project_recommendations(db: Session, team_id: UUID, count: int = 5) -> list[ProjectRecommendation]:
     team = db.get(Team, team_id)
     if team is None:
         raise ValueError(f"Team {team_id} not found")
@@ -94,7 +94,13 @@ def generate_project_recommendations(db: Session, team_id: UUID, count: int = 3)
     interest_ids = {row.interest_id for row in db.query(UserInterest).filter(UserInterest.user_id.in_(member_user_ids))}
     interests = [row.name for row in db.query(Interest).filter(Interest.id.in_(interest_ids))]
 
-    ideas = recommendations.generate_project_ideas(skills, interests, count=count)
+    experience_levels = [
+        row.experience_level
+        for row in db.query(User).filter(User.id.in_(member_user_ids))
+        if row.experience_level
+    ]
+
+    ideas = recommendations.generate_project_ideas(skills, interests, experience_levels, count=count)
 
     db.query(ProjectRecommendation).filter_by(team_id=team_id).delete()
     rows = []
@@ -103,6 +109,8 @@ def generate_project_recommendations(db: Session, team_id: UUID, count: int = 3)
             team_id=team_id,
             title=idea.title,
             description=idea.description,
+            difficulty_level=idea.difficulty_level,
+            required_technologies=idea.required_technologies,
             confidence_score=idea.confidence_score,
         )
         db.add(row)

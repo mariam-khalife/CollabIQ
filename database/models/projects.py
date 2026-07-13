@@ -2,20 +2,25 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-from .constants import PHASE_STATUSES, PROJECT_STATUSES
+from .constants import DIFFICULTY_LEVELS, PHASE_STATUSES, PROJECT_STATUSES
 
 
 class ProjectRecommendation(Base):
     __tablename__ = "project_recommendations"
+    __table_args__ = (
+        CheckConstraint(f"difficulty_level IN {DIFFICULTY_LEVELS}", name="ck_project_recommendations_difficulty"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     team_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    difficulty_level: Mapped[str | None] = mapped_column(String(20))
+    required_technologies: Mapped[list[str] | None] = mapped_column(ARRAY(String(100)))
     confidence_score: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 

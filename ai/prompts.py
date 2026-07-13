@@ -2,10 +2,20 @@ PROJECT_RECOMMENDATION_PROMPT = """You are helping a student team on CollabIQ pi
 
 Team skills: {skills}
 Team interests: {interests}
+Team experience levels: {experience_levels}
 
-Suggest exactly {count} project ideas that fit this team's combined skills and interests.
+Suggest exactly {count} project ideas that fit this team's combined skills, interests, and
+experience. Match the ambition of each idea to the team's experience levels: a mostly
+beginner team should get approachable projects, an advanced team can handle harder ones.
+
 Respond with a JSON object of the form:
-{{"projects": [{{"title": "...", "description": "...", "confidence_score": 0.0}}]}}
-confidence_score must be a number between 0.0 and 1.0 reflecting how well the idea fits the
-team's skills and interests.
+{{"projects": [{{"title": "...", "description": "...", "difficulty_level": "...",
+"required_technologies": ["...", "..."], "confidence_score": 0.0}}]}}
+
+Rules for each field:
+- difficulty_level must be exactly one of: "beginner", "intermediate", "advanced".
+- required_technologies is a list of the concrete technologies the project needs
+  (e.g. ["React", "FastAPI", "PostgreSQL"]), preferring ones the team already knows.
+- confidence_score must be a number between 0.0 and 1.0 reflecting how well the idea
+  fits the team's skills, interests, and experience.
 """

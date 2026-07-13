@@ -1,5 +1,6 @@
 PROFICIENCY_LEVELS = ("beginner", "intermediate", "advanced")
 AVAILABILITY_VALUES = ("part_time", "full_time")
+DIFFICULTY_LEVELS = ("beginner", "intermediate", "advanced")
 
 INVITATION_STATUSES = ("pending", "accepted", "declined")
 TEAM_STATUSES = ("forming", "active", "completed")

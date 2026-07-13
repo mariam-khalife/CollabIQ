@@ -55,10 +55,13 @@ def _call_with_retry(fn: Callable[[], T], *, max_retries: int = 3, base_delay: f
     raise AssertionError("unreachable")
 
 
-def generate_project_ideas(skills: list[str], interests: list[str], count: int = 3) -> list[ProjectIdea]:
+def generate_project_ideas(
+    skills: list[str], interests: list[str], experience_levels: list[str] | None = None, count: int = 5
+) -> list[ProjectIdea]:
     prompt = prompts.PROJECT_RECOMMENDATION_PROMPT.format(
         skills=", ".join(skills) or "none listed",
         interests=", ".join(interests) or "none listed",
+        experience_levels=", ".join(experience_levels or []) or "not specified",
         count=count,
     )
 

@@ -20,8 +20,12 @@ score and a suggested role for each. Rule-based — no LLM call, instant, free.
 
 ## 2. Project Suggestions (FR-3.1 to FR-3.3)
 
-Generates project ideas that fit the team's combined skills and interests, using an LLM.
-Results are cached in `project_recommendations`; regenerating replaces the previous set.
+Generates 5 project ideas that fit the team's combined skills, interests, and experience
+levels, using an LLM. Each idea carries a title, description, difficulty level
+(beginner/intermediate/advanced - matched to the team's experience), the required
+technologies, and a confidence score. Results are cached in `project_recommendations`;
+regenerating replaces the previous set, and every LLM response is validated with
+Pydantic before anything is stored.
 
 Provider-agnostic: any OpenAI-compatible API works. Configure in `.env`:
 
