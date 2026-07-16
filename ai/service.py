@@ -1,27 +1,27 @@
-import sys
-from pathlib import Path
 from uuid import UUID
 
-DATABASE_DIR = Path(__file__).resolve().parent.parent / "database"
-if str(DATABASE_DIR) not in sys.path:
-    sys.path.insert(0, str(DATABASE_DIR))
-
-from models import (  # noqa: E402
+from models import (  # path bootstrapped in ai/__init__.py
+    Interest,
     MatchSuggestion,
+    Project,
+    ProjectRecommendation,
     Role,
     Skill,
     Team,
     TeamInvitation,
     TeamMember,
     User,
+    UserInterest,
     UserSkill,
 )
-from sqlalchemy.orm import Session  # noqa: E402
+from sqlalchemy.orm import Session
 
-from . import matching  # noqa: E402
+from . import matching, recommendations
 
 # A team leader is shown at most this many candidates per matching run.
 MAX_SUGGESTIONS = 5
+# A team is shown at most this many project ideas per generation run.
+MAX_RECOMMENDATIONS = 5
 
 
 def _suggest_role_for_skill(db: Session, skill_id: UUID | None) -> Role | None:
@@ -75,3 +75,69 @@ def generate_match_suggestions(
 
     db.commit()
     return suggestions
+
+
+def generate_project_recommendations(
+    db: Session, team_id: UUID, count: int = MAX_RECOMMENDATIONS
+) -> list[ProjectRecommendation]:
+    count = min(count, MAX_RECOMMENDATIONS)
+
+    team = db.get(Team, team_id)
+    if team is None:
+        raise ValueError(f"Team {team_id} not found")
+
+    member_user_ids = [row.user_id for row in db.query(TeamMember).filter_by(team_id=team_id)]
+    member_user_ids.append(team.leader_id)
+
+    skills = [
+        name
+        for (name,) in db.query(Skill.name)
+        .join(UserSkill, UserSkill.skill_id == Skill.id)
+        .filter(UserSkill.user_id.in_(member_user_ids))
+        .distinct()
+    ]
+    interests = [
+        name
+        for (name,) in db.query(Interest.name)
+        .join(UserInterest, UserInterest.interest_id == Interest.id)
+        .filter(UserInterest.user_id.in_(member_user_ids))
+        .distinct()
+    ]
+    experience_levels = [
+        level
+        for (level,) in db.query(User.experience_level)
+        .filter(User.id.in_(member_user_ids), User.experience_level.isnot(None))
+    ]
+
+    # The prompt asks for exactly `count` ideas, but the model's compliance is
+    # not guaranteed - enforce the cardinality here, and never wipe the cached
+    # recommendations for an empty answer.
+    ideas = recommendations.generate_project_ideas(skills, interests, experience_levels, count=count)
+    if not ideas:
+        raise RuntimeError("LLM returned no project ideas - previous recommendations kept")
+    ideas = ideas[:count]
+
+    # Refresh the cache, but never delete a recommendation the team has already
+    # accepted: projects.recommendation_id references it (NOT NULL FK), so
+    # deleting it would fail - and the team's chosen project must stay traceable.
+    accepted_ids = db.query(Project.recommendation_id).filter_by(team_id=team_id)
+    db.query(ProjectRecommendation).filter(
+        ProjectRecommendation.team_id == team_id,
+        ProjectRecommendation.id.notin_(accepted_ids),
+    ).delete(synchronize_session=False)
+
+    rows = []
+    for idea in ideas:
+        row = ProjectRecommendation(
+            team_id=team_id,
+            title=idea.title,
+            description=idea.description,
+            difficulty_level=idea.difficulty_level,
+            required_technologies=idea.required_technologies,
+            confidence_score=idea.confidence_score,
+        )
+        db.add(row)
+        rows.append(row)
+
+    db.commit()
+    return rows
