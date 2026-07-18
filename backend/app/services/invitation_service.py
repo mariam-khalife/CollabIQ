@@ -7,6 +7,7 @@ from app.models.invitation import TeamInvitation
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.invitation import InvitationCreate
+from app.services import notification_service
 
 
 def create_invitation(
@@ -43,6 +44,16 @@ def create_invitation(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+
+    notification_service.create_notification(
+        db,
+        user_id=invitation.invited_user_id,
+        type="invitation",
+        title="Team Invitation",
+        message=f"You were invited to join {team.team_name}.",
+        related_id=invitation.id,
+        action_url="/invitations",
+    )
 
     return invitation
 
@@ -92,6 +103,29 @@ def accept_invitation(
     db.add(member)
     db.commit()
     db.refresh(invitation)
+
+    team = db.query(Team).filter(Team.id == invitation.team_id).first()
+
+    notification_service.create_notification(
+        db,
+        user_id=current_user.id,
+        type="team_update",
+        title="Joined Team",
+        message=f"You joined {team.team_name}.",
+        related_id=team.id,
+        action_url=f"/teams/{team.id}",
+    )
+
+    if team.leader_id != current_user.id:
+        notification_service.create_notification(
+            db,
+            user_id=team.leader_id,
+            type="team_update",
+            title="New Team Member",
+            message=f"A new member joined {team.team_name}.",
+            related_id=team.id,
+            action_url=f"/teams/{team.id}",
+        )
 
     return invitation
 

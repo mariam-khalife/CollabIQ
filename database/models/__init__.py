@@ -1,4 +1,5 @@
 from .base import Base
+from .notifications import Notification
 from .projects import Project, ProjectRecommendation, Roadmap, RoadmapPhase
 from .reputation import ReputationLog
 from .tasks import Task
@@ -23,4 +24,5 @@ __all__ = [
     "RoadmapPhase",
     "Task",
     "ReputationLog",
+    "Notification",
 ]
