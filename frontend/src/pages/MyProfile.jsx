@@ -140,7 +140,7 @@ export default function Profile() {
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-start">
             <div className="relative group flex-shrink-0 mx-auto md:mx-0">
               <img 
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200" 
+                src="https://images.unsplash.com/photo-1654110455429-cf322b40a906?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjJ8fHVzZXIlMjBwcm9maWxlfGVufDB8fDB8fHww" 
                 alt="Profile Avatar" 
                 className="w-28 h-28 rounded-xl object-cover border border-slate-100"
               />

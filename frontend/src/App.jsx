@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
 
 import Layout from "./components/Layout";
+import AITeamMatching from "./pages/AiMatching";
+import TeamManagement from "./pages/TeamManagement";
 
 
 function App() {
@@ -49,6 +51,25 @@ function App() {
             </Layout>
           }
         />
+
+         <Route
+          path="/aimathcing"
+          element={
+            <Layout>
+              <AITeamMatching />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/team-management"
+          element={
+            <Layout>
+              <TeamManagement />
+            </Layout>
+          }
+        />
+
 
 
       </Routes>
