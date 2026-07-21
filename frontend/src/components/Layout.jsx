@@ -1,29 +1,35 @@
-import Sidebar from "./Sidebar";
+import { useState } from "react";
+
 import Navbar from "./Navbar";
+import Sidebar from "./Sidebar";
 
+export default function Layout({ children }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-export default function Layout({children}){
+  const openSidebar = () => {
+    setIsSidebarOpen(true);
+  };
 
-return(
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
 
-<div className="flex min-h-screen bg-[#F8FAFC]">
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
+      />
 
-<Sidebar />
+      <div className="min-h-screen md:ml-64">
+        <Navbar onMenuClick={openSidebar} />
 
-
-<main className="flex-1">
-
-<Navbar />
-
-
-{children}
-
-
-</main>
-
-
-</div>
-
-)
-
+        <main className="min-w-0 overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 }

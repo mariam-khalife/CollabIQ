@@ -1,99 +1,127 @@
-import React from "react";
-import { Link } from "react-router-dom";
-
 import {
- LayoutDashboard,
- User,
- Users,
- Cpu,
- Lightbulb,
- FolderGit2,
- Bell,
- Award,
- Settings,
- Plus
+  LayoutDashboard,
+  User,
+  Users,
+  X,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
+const navigationItems = [
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "My Profile",
+    path: "/profile",
+    icon: User,
+  },
+  {
+    label: "Team Management",
+    path: "/team-management",
+    icon: Users,
+  },
+  {
+    label: "AI Team Matching",
+    path: "/ai-matching",
+    icon: Users,
+  },
+];
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
+  const linkClassName = ({ isActive }) =>
+    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+      isActive
+        ? "bg-indigo-50 text-indigo-700"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    }`;
 
   return (
-
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-6 shrink-0">
-
-      <div className="space-y-8">
-
-        <div>
-          <h1 className="text-xl font-bold text-[#1E293B] flex items-center gap-1">
-            CollabIQ
-          </h1>
-
-          <p className="text-[11px] font-medium text-slate-400 tracking-wider mt-0.5">
-            Academic Excellence
-          </p>
-        </div>
-
-
-        <nav className="space-y-1">
-
-          <Link 
-          to="/dashboard"
-          className="flex items-center gap-3 px-4 py-3"
-          >
-            <LayoutDashboard size={18}/>
-            Dashboard
-          </Link>
-
-
-          <Link 
-          to="/profile"
-          className="flex items-center gap-3 px-4 py-3"
-          >
-            <User size={18}/>
-            My Profile
-          </Link>
-
-
-          <Link 
-          to="/team-management"
-          className="flex items-center gap-3 px-4 py-3"
-          >
-            <Users size={18}/>
-            Team Management
-          </Link>
-
-
-        </nav>
-
-
-      </div>
-
-
-      <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
-
-        <img
-          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500"
-          className="w-10 h-10 rounded-full object-cover"
+    <>
+      {/* Mobile background overlay */}
+      {isOpen && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
+          aria-label="Close navigation menu"
         />
+      )}
 
-        <div>
-          <h4 className="text-sm font-bold">
-            Alex Rivera
-          </h4>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white p-6 transition-transform duration-300 md:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* Logo */}
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-800">
+                CollabIQ
+              </h1>
 
-          <p className="text-xs text-slate-400">
-            Computer Science
-          </p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                Academic Excellence
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+              aria-label="Close navigation menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 space-y-1 overflow-y-auto">
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={onClose}
+                  className={linkClassName}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {/* Current user */}
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <NavLink
+              to="/profile"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                U
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-800">
+                  Current User
+                </p>
+
+                <p className="truncate text-xs text-slate-400">
+                  View profile
+                </p>
+              </div>
+            </NavLink>
+          </div>
         </div>
-
-      </div>
-
-
-    </aside>
-
+      </aside>
+    </>
   );
-
 }
-
 
 export default Sidebar;
