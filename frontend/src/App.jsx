@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -6,31 +6,28 @@ import ForgotPassword from "./pages/ForgotPassword";
 
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
+import AiMatching from "./pages/AiMatching";
+import TeamManagement from "./pages/TeamManagement";
+import Notifications from "./pages/Notifications";
 
 import Layout from "./components/Layout";
 
-
 function App() {
-
   return (
-
-    <BrowserRouter>
-
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
-
-        {/* Authentication pages */}
+        {/* Public authentication pages */}
         <Route path="/" element={<Login />} />
-
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route 
-          path="/forgot-password" 
-          element={<ForgotPassword />} 
-        />
-
-
-        {/* Pages with Sidebar + Navbar */}
-
+        {/* Pages using the global layout */}
         <Route
           path="/dashboard"
           element={
@@ -39,7 +36,6 @@ function App() {
             </Layout>
           }
         />
-
 
         <Route
           path="/profile"
@@ -50,14 +46,37 @@ function App() {
           }
         />
 
+        <Route
+          path="/ai-matching"
+          element={
+            <Layout>
+              <AiMatching />
+            </Layout>
+          }
+        />
 
+        <Route
+          path="/team-management"
+          element={
+            <Layout>
+              <TeamManagement />
+            </Layout>
+          }
+        />
+        <Route
+        path="/notifications"
+        element={
+          <Layout>
+            <Notifications />
+          </Layout>
+        }
+        />
+
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-
     </BrowserRouter>
-
   );
-
 }
-
 
 export default App;
