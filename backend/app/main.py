@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import auth, users, teams, invitations, skills, interest, projects, roadmap
+from app.routers import auth, users, teams, invitations, skills, interest, projects, roadmap, tasks
 app = FastAPI(
     title="CollabIQ API",
     description="Backend API for the CollabIQ platform",
@@ -15,6 +15,7 @@ app.include_router(skills.router)
 app.include_router(interest.router)
 app.include_router(projects.router)
 app.include_router(roadmap.router)
+app.include_router(tasks.router)
 
 @app.get("/")
 def root():
