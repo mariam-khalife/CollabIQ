@@ -30,6 +30,32 @@ def get_team_by_id(db: Session, team_id):
 def get_user_led_teams(db: Session, user_id):
     return db.query(Team).filter(Team.leader_id == user_id).all()
 
+def get_user_teams(db: Session, user_id: UUID):
+    led_teams = db.query(Team).filter(
+        Team.leader_id == user_id
+    ).all()
+
+    joined_team_ids = [
+        member.team_id
+        for member in db.query(TeamMember).filter(
+            TeamMember.user_id == user_id
+        ).all()
+    ]
+
+    joined_teams = []
+
+    if joined_team_ids:
+        joined_teams = db.query(Team).filter(
+            Team.id.in_(joined_team_ids)
+        ).all()
+
+    teams_by_id = {
+        team.id: team
+        for team in led_teams + joined_teams
+    }
+
+    return list(teams_by_id.values())
+
 def get_team_members(db: Session, team_id):
     return db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
 

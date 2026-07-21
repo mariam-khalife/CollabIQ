@@ -8,7 +8,8 @@ from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate, PublicUserResponse
-
+from app.schemas.team import TeamResponse
+from app.services.team_service import get_user_teams
 
 router = APIRouter(
     prefix="/users",
@@ -67,6 +68,22 @@ def update_my_profile(
 
     return current_user
 
+@router.get(
+    "/{user_id}/teams",
+    response_model=list[TeamResponse]
+)
+def list_user_teams(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own teams"
+        )
+
+    return get_user_teams(db, user_id)
 
 @router.get("/{user_id}", response_model=PublicUserResponse)
 def get_user_by_id(user_id: UUID, db: Session = Depends(get_db)):
