@@ -1,7 +1,15 @@
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+PhaseStatus = Literal[
+    "not_started",
+    "in_progress",
+    "completed",
+]
 
 
 class RoadmapPhaseCreate(BaseModel):
@@ -14,6 +22,10 @@ class RoadmapCreate(BaseModel):
     project_id: UUID
     generated_by: str = "manual"
     phases: list[RoadmapPhaseCreate]
+
+
+class RoadmapPhaseStatusUpdate(BaseModel):
+    status: PhaseStatus
 
 
 class RoadmapPhaseResponse(BaseModel):
@@ -34,4 +46,16 @@ class RoadmapResponse(BaseModel):
     project_id: UUID
     generated_by: str
     created_at: datetime
-    phases: list[RoadmapPhaseResponse] = []
+    phases: list[RoadmapPhaseResponse] = Field(default_factory=list)
+
+
+class RoadmapProgressResponse(BaseModel):
+    roadmap_id: UUID
+    project_id: UUID
+    progress_percentage: float
+
+    total_phases: int
+    completed_phases: int
+
+    total_tasks: int
+    completed_tasks: int

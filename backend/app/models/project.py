@@ -25,6 +25,7 @@ class Project(Base):
     recommendation_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("project_recommendations.id"),
+        unique=True,
         nullable=True
     )
 

@@ -8,6 +8,7 @@ from app.models.team import Team
 from app.models.user import User
 from app.schemas.invitation import InvitationCreate
 from app.services import notification_service
+from app.services.reputation_service import add_reputation_event
 
 
 def create_invitation(
@@ -101,9 +102,17 @@ def accept_invitation(
     invitation.responded_at = datetime.now(timezone.utc)
 
     db.add(member)
+    
+    add_reputation_event(
+        db,
+        current_user.id,
+        "team_joined",
+    )
+    
     db.commit()
     db.refresh(invitation)
-
+    db.refresh(member)
+    
     team = db.query(Team).filter(Team.id == invitation.team_id).first()
 
     notification_service.create_notification(

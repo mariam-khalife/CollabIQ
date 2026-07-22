@@ -26,7 +26,7 @@ def create_notification(
         action_url=action_url,
     )
     db.add(notification)
-    db.commit()
+    db.flush()
     db.refresh(notification)
     return notification
 

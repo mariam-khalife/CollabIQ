@@ -36,7 +36,11 @@ def create_new_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = create_project(db, project_data, current_user)
+    result = create_project(
+        db,
+        project_data,
+        current_user
+    )
 
     if result == "team_not_found":
         raise HTTPException(
@@ -56,26 +60,19 @@ def create_new_project(
             detail="This team already has a project"
         )
 
+    if result == "recommendation_not_found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project recommendation not found for this team"
+        )
+
     return result
 
 
-@router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(
-    project_id: UUID,
-    db: Session = Depends(get_db)
-):
-    project = get_project_by_id(db, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
-        )
-
-    return project
-
-
-@router.get("/team/{team_id}", response_model=ProjectResponse)
+@router.get(
+    "/team/{team_id}",
+    response_model=ProjectResponse
+)
 def get_project_for_team(
     team_id: UUID,
     db: Session = Depends(get_db)
@@ -91,14 +88,42 @@ def get_project_for_team(
     return project
 
 
-@router.put("/{project_id}", response_model=ProjectResponse)
+@router.get(
+    "/{project_id}",
+    response_model=ProjectResponse
+)
+def get_project(
+    project_id: UUID,
+    db: Session = Depends(get_db)
+):
+    project = get_project_by_id(
+        db,
+        project_id
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+
+    return project
+
+
+@router.put(
+    "/{project_id}",
+    response_model=ProjectResponse
+)
 def update_existing_project(
     project_id: UUID,
     project_data: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    project = get_project_by_id(db, project_id)
+    project = get_project_by_id(
+        db,
+        project_id
+    )
 
     if not project:
         raise HTTPException(
@@ -116,7 +141,11 @@ def update_existing_project(
             detail="Only the team leader can update the project"
         )
 
-    return update_project(db, project, project_data)
+    return update_project(
+        db,
+        project,
+        project_data
+    )
 
 
 @router.delete("/{project_id}")
@@ -125,7 +154,10 @@ def remove_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    project = get_project_by_id(db, project_id)
+    project = get_project_by_id(
+        db,
+        project_id
+    )
 
     if not project:
         raise HTTPException(
@@ -143,7 +175,10 @@ def remove_project(
             detail="Only the team leader can delete the project"
         )
 
-    delete_project(db, project)
+    delete_project(
+        db,
+        project
+    )
 
     return {
         "message": "Project deleted successfully"
