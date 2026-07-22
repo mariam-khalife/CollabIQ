@@ -8,6 +8,8 @@ from app.models.task import Task
 from app.models.team import Team, TeamMember
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate
+from app.services.reputation_service import add_reputation_event
+from app.services import notification_service
 
 
 ALLOWED_STATUSES = {"todo", "in_progress", "completed"}
@@ -59,6 +61,17 @@ def create_task(
     db.commit()
     db.refresh(task)
 
+    if task.assigned_to:
+        notification_service.create_notification( 
+            db,
+            user_id=task.assigned_to,
+            type="task_assignment",
+            title="New Task Assigned",
+            message=f'You were assigned the task "{task.title}".',
+            related_id=task.id,
+            action_url=f"/tasks/{task.id}",
+    )
+
     return task
 
 
@@ -100,8 +113,36 @@ def update_task(
         if update_data["status"] not in ALLOWED_STATUSES:
             return "invalid_status"
 
+    old_status = task.status
+    old_assigned_to = task.assigned_to
+
     for field, value in update_data.items():
         setattr(task, field, value)
+
+    if (
+        task.assigned_to
+        and task.assigned_to != old_assigned_to
+    ):
+        notification_service.create_notification(
+            db,
+            user_id=task.assigned_to,
+            type="task_assignment",
+            title="Task Assigned",
+            message=f'You were assigned the task "{task.title}".',
+            related_id=task.id,
+            action_url=f"/tasks/{task.id}",
+        )
+
+    if (
+        old_status != "completed"
+        and task.status == "completed"
+        and task.assigned_to
+    ):
+        add_reputation_event(
+            db,
+            task.assigned_to,
+            "task_completed",
+        )
 
     db.commit()
     db.refresh(task)
@@ -126,7 +167,19 @@ def update_task_status(
     if not is_leader and not is_assignee:
         return "not_allowed"
 
+    old_status = task.status
     task.status = new_status
+
+    if (
+        old_status != "completed"
+        and new_status == "completed"
+        and task.assigned_to
+    ):
+        add_reputation_event(
+            db,
+            task.assigned_to,
+            "task_completed",
+        )
 
     db.commit()
     db.refresh(task)

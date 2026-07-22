@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,7 +14,11 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
-    status: str | None = None
+    status: Literal[
+        "accepted",
+        "in_progress",
+        "completed",
+    ] | None = None
 
 
 class ProjectResponse(BaseModel):
