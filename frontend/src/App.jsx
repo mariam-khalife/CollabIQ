@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Layout Wrapper
-import MainLayout from "./MainLayout"; // or "./components/Layout" based on your preference
+import MainLayout from "./MainLayout";
 
 // Public Page
 import Landing from "./pages/Landing";
@@ -19,14 +19,19 @@ import Notifications from "./pages/Notifications";
 import Reputation from "./pages/Reputation";
 import Settings from "./pages/Settings";
 
-// Auth Pages (Rendered outside the layout)
+// Auth Pages
 import Login from "./pages/login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
         {/* Public Landing Page */}
         <Route path="/" element={<Landing />} />
@@ -36,7 +41,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Main Application Routes Wrapped in Layout */}
+        {/* Main Application Routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<MyProfile />} />
@@ -50,7 +55,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
         </Route>
 
-        {/* Fallback Catch-All Route */}
+        {/* Redirect unknown routes */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

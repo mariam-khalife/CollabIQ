@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Rocket,
@@ -8,15 +9,18 @@ import {
   Mail,
   Lock,
   RotateCcw,
+  Eye,
+  EyeOff,
   ArrowRight,
   HelpCircle,
 } from "lucide-react";
 
-const Register = () => {
+import "../styles/auth.css";
+
+function Register() {
   const navigate = useNavigate();
 
-  // Form State
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
     fullName: "",
     university: "",
     major: "",
@@ -26,42 +30,110 @@ const Register = () => {
     agreeToTerms: false,
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   // Handlers
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
+    setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
     if (errorMessage) setErrorMessage("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!form.fullName.trim()) {
+      setErrorMessage("Please enter your full name.");
+      return;
+    }
+
+    if (!form.email.trim()) {
+      setErrorMessage("Please enter your email.");
+      return;
+    }
+
+    if (!form.password) {
+      setErrorMessage("Please enter your password.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setErrorMessage("Password must contain at least 8 characters.");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
     }
 
-    if (!formData.agreeToTerms) {
+    if (!form.agreeToTerms) {
       setErrorMessage("Please accept the Terms of Service and Privacy Policy.");
       return;
     }
 
-    setIsLoading(true);
-    console.log("Registering account:", formData);
+    const registrationData = {
+      full_name: form.fullName.trim(),
+      email: form.email.trim(),
+      password: form.password,
+      university: form.university.trim() || null,
+      major: form.major.trim() || null,
+    };
 
-    // API Integration Point:
-    // API.post('/auth/register', formData).then(() => navigate('/login'))
+    try {
+      setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
+      const response = await axios.post(
+        "http://127.0.0.1:8000/auth/register",
+        registrationData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Registration successful:", response.data);
       navigate("/login");
-    }, 800);
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      if (!error.response) {
+        setErrorMessage(
+          "Unable to connect to the backend server. Please make sure it is running."
+        );
+        return;
+      }
+
+      const detail = error.response.data?.detail;
+
+      if (Array.isArray(detail)) {
+        const validationMessages = detail
+          .map((item) => {
+            const field = item.loc?.at(-1) || "field";
+            return `${field}: ${item.msg}`;
+          })
+          .join(" | ");
+
+        setErrorMessage(validationMessages);
+        return;
+      }
+
+      if (typeof detail === "string") {
+        setErrorMessage(detail);
+        return;
+      }
+
+      setErrorMessage("Registration failed. Please verify your information.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialRegister = (provider) => {
@@ -114,7 +186,7 @@ const Register = () => {
                 name="fullName"
                 required
                 placeholder="Enter your full name"
-                value={formData.fullName}
+                value={form.fullName}
                 onChange={handleChange}
                 className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
               />
@@ -133,9 +205,8 @@ const Register = () => {
                 <input
                   type="text"
                   name="university"
-                  required
                   placeholder="Your University"
-                  value={formData.university}
+                  value={form.university}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
                 />
@@ -152,9 +223,8 @@ const Register = () => {
                 <input
                   type="text"
                   name="major"
-                  required
                   placeholder="e.g. Computer Science"
-                  value={formData.major}
+                  value={form.major}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
                 />
@@ -174,7 +244,7 @@ const Register = () => {
                 name="email"
                 required
                 placeholder="student@university.edu"
-                value={formData.email}
+                value={form.email}
                 onChange={handleChange}
                 className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
               />
@@ -191,14 +261,25 @@ const Register = () => {
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   required
                   placeholder="••••••••"
-                  value={formData.password}
+                  value={form.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -210,14 +291,25 @@ const Register = () => {
               <div className="relative">
                 <RotateCcw className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   required
                   placeholder="••••••••"
-                  value={formData.confirmPassword}
+                  value={form.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
@@ -228,7 +320,7 @@ const Register = () => {
               <input
                 type="checkbox"
                 name="agreeToTerms"
-                checked={formData.agreeToTerms}
+                checked={form.agreeToTerms}
                 onChange={handleChange}
                 className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
               />
@@ -308,25 +400,7 @@ const Register = () => {
             onClick={() => handleSocialRegister("eduid")}
             className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-xs font-extrabold text-slate-700 cursor-pointer"
           >
-            <svg
-              className="w-4 h-4 text-slate-800"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 14l9-5-9-5-9 5 9 5z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
-              />
-            </svg>
+            <GraduationCap className="w-4 h-4 text-slate-800" />
             EduID
           </button>
         </div>
@@ -349,6 +423,6 @@ const Register = () => {
       </button>
     </div>
   );
-};
+}
 
 export default Register;
