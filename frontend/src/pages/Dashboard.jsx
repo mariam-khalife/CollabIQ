@@ -1,6 +1,3 @@
-export default function Dashboard() {
-  return <h1>Dashboard Page</h1>;
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/dashboard.css';
@@ -94,13 +91,13 @@ export default function AcademicDashboard() {
   return (
     <div className="w-full text-slate-800 font-sans antialiased">
       
-      {/* MAIN CONTAINER: Changed from h-screen overflow-hidden to allow healthy dynamic height scrolling */}
+      {/* MAIN CONTAINER */}
       <main className="w-full min-h-screen">
         
-        {/* VIEWPORT WRAPPER: Responsive padding adjustment */}
+        {/* VIEWPORT WRAPPER */}
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
           
-          {/* HEADER SECTION: Wraps gracefully on compact devices */}
+          {/* HEADER SECTION */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Academic Dashboard</h2>
@@ -111,7 +108,6 @@ export default function AcademicDashboard() {
 
             {/* Actions & Search Controls */}
             <div className="flex flex-col xs:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-              {/* Search Bar Container */}
               <div className="relative w-full sm:w-48">
                 <Search
                   size={16}
@@ -126,7 +122,6 @@ export default function AcademicDashboard() {
                 />
               </div>
 
-              {/* Action Buttons */}
               <div className="flex items-center gap-2 w-full justify-end">
                 <button 
                   onClick={() => alert("Opening Project Workspace...")}
@@ -144,7 +139,7 @@ export default function AcademicDashboard() {
             </div>
           </div>
 
-          {/* ROW 1: ACTIVE RESEARCH GRID (Responsive Grid Flow) */}
+          {/* ROW 1: ACTIVE RESEARCH GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
             
             {/* Active Research Card */}
@@ -160,7 +155,6 @@ export default function AcademicDashboard() {
                   AI-Driven Neural Pattern Recognition
                 </h3>
                 
-                {/* Progress Tracking */}
                 <div className="mt-5">
                   <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
                     <span>Overall Progress</span>
@@ -172,7 +166,6 @@ export default function AcademicDashboard() {
                 </div>
               </div>
 
-              {/* Card Meta Stats Footer */}
               <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-slate-100 text-[11px] sm:text-xs">
                 <div>
                   <p className="text-slate-400 font-medium">Milestone</p>
@@ -355,5 +348,4 @@ export default function AcademicDashboard() {
 
     </div>
   );
->>>>>>> feature/profile-responsiveness
 }
