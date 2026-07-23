@@ -1,0 +1,277 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f7f8fc;
+}
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* ---------- Logo Section ---------- */
+
+.logo-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-box {
+  width: 60px;
+  height: 60px;
+  margin: auto;
+  background: #4f46e5;
+  border-radius: 15px;
+  color: white;
+  font-size: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo-section h1 {
+  margin-top: 15px;
+  font-size: 42px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.logo-section p {
+  color: #6b7280;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+/* ---------- Card ---------- */
+
+.auth-card {
+  width: 430px;
+  background: white;
+  border-radius: 16px;
+  padding: 35px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+
+.auth-card h2 {
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin-bottom: 25px;
+}
+
+/* ---------- Form ---------- */
+
+.auth-card label {
+  display: block;
+  margin-bottom: 8px;
+  margin-top: 15px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+}
+
+.auth-card input:focus {
+  border-color: #4f46e5;
+}
+
+/* ---------- Button ---------- */
+
+/* ---------- Button ---------- */
+
+/* ---------- Primary Button ---------- */
+
+.auth-card button {
+  width: 100%;
+  margin-top: 25px;
+  padding: 14px;
+  background: #4338ca;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.auth-card button:hover {
+  background: #3730a3;
+}
+
+/* ---------- Footer ---------- */
+
+.switch-text {
+  text-align: center;
+  margin-top: 25px;
+  color: #6b7280;
+}
+
+.switch-text a {
+  color: #4338ca;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.switch-text a:hover {
+  text-decoration: underline;
+}
+.row {
+  display: flex;
+  gap: 15px;
+}
+
+.input-group {
+  flex: 1;
+}
+
+.checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: normal !important;
+}
+
+.checkbox input {
+  width: 16px !important;
+  height: 16px;
+}
+/* Input with icons */
+.input-group {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 45px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 16px;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+}
+/* ---------- Responsive ---------- */
+
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 20px 15px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 25px;
+  }
+
+  .logo-section h1 {
+    font-size: 32px;
+  }
+
+  .logo-section p {
+    font-size: 14px;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .logo-box {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+
+  .logo-section h1 {
+    font-size: 28px;
+  }
+
+  .auth-card button {
+    font-size: 15px;
+    padding: 12px;
+  }
+
+  .input-group input {
+    font-size: 14px;
+  }
+}
+/* Social login buttons */
+
+.social-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.social-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0;
+
+  padding: 12px;
+
+  background: white !important;
+  color: #374151 !important;
+
+  border: 1px solid #d1d5db !important;
+  border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.social-button:hover {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
+}
