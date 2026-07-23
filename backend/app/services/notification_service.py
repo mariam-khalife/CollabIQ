@@ -15,8 +15,6 @@ def create_notification(
     related_id: UUID | None = None,
     action_url: str | None = None,
 ) -> Notification:
-    """Call this from any other service when a notifiable event happens
-    (invitation sent, task assigned, deadline approaching, etc.)."""
     notification = Notification(
         user_id=user_id,
         type=type,
@@ -25,11 +23,12 @@ def create_notification(
         related_id=related_id,
         action_url=action_url,
     )
+
     db.add(notification)
     db.flush()
     db.refresh(notification)
-    return notification
 
+    return notification
 
 def get_notifications(
     db: Session,

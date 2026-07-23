@@ -12,7 +12,7 @@ from app.services.reputation_service import add_reputation_event
 from app.services import notification_service
 
 
-ALLOWED_STATUSES = {"todo", "in_progress", "completed"}
+ALLOWED_STATUSES = {"todo", "in_progress", "done"}
 
 
 def get_phase_team(db: Session, phase_id: UUID):
@@ -57,22 +57,29 @@ def create_task(
         status="todo"
     )
 
-    db.add(task)
-    db.commit()
-    db.refresh(task)
+    try:
+        db.add(task)
+        db.flush()
 
-    if task.assigned_to:
-        notification_service.create_notification( 
-            db,
-            user_id=task.assigned_to,
-            type="task_assignment",
-            title="New Task Assigned",
-            message=f'You were assigned the task "{task.title}".',
-            related_id=task.id,
-            action_url=f"/tasks/{task.id}",
-    )
+        if task.assigned_to:
+            notification_service.create_notification(
+                db,
+                user_id=task.assigned_to,
+                type="task_assignment",
+                title="New Task Assigned",
+                message=f'You were assigned the task "{task.title}".',
+                related_id=task.id,
+                action_url=f"/tasks/{task.id}",
+            )
 
-    return task
+        db.commit()
+        db.refresh(task)
+
+        return task
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_task_by_id(db: Session, task_id: UUID):
@@ -134,8 +141,8 @@ def update_task(
         )
 
     if (
-        old_status != "completed"
-        and task.status == "completed"
+        old_status != "done"
+        and task.status == "done"
         and task.assigned_to
     ):
         add_reputation_event(
@@ -171,8 +178,8 @@ def update_task_status(
     task.status = new_status
 
     if (
-        old_status != "completed"
-        and new_status == "completed"
+        old_status != "done"
+        and new_status == "done"
         and task.assigned_to
     ):
         add_reputation_event(

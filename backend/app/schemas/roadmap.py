@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field
 
 
 PhaseStatus = Literal[
-    "not_started",
+    "todo",
     "in_progress",
-    "completed",
+    "done",
 ]
 
 
