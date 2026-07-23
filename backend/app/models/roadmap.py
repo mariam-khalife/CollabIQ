@@ -69,5 +69,5 @@ class RoadmapPhase(Base):
     status: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
-        default="not_started"
+        default="todo"
     )

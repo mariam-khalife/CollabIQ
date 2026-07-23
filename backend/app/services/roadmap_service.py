@@ -51,7 +51,7 @@ def create_roadmap(
             phase_name=phase_data.phase_name,
             phase_order=phase_data.phase_order,
             target_date=phase_data.target_date,
-            status="not_started"
+            status="todo"
         )
 
         db.add(phase)
@@ -150,7 +150,7 @@ def calculate_roadmap_progress(
     completed_phases = sum(
         1
         for phase in phases
-        if phase.status == "completed"
+        if phase.status == "done"
     )
 
     phase_ids = [
@@ -170,7 +170,7 @@ def calculate_roadmap_progress(
     completed_tasks = sum(
         1
         for task in tasks
-        if task.status == "completed"
+        if task.status == "done"
     )
 
     if total_tasks > 0:
