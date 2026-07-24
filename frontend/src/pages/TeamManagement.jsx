@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   BarChart3,
@@ -694,11 +695,13 @@ export default function TeamManagement() {
               </div>
 
               <span className="w-fit rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-700">
+
                 Active Project
               </span>
             </div>
 
             <div className="overflow-x-auto">
+
               <table className="w-full min-w-[700px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-slate-50 bg-slate-50/10 text-[9px] font-bold uppercase tracking-wider text-slate-400">
@@ -794,10 +797,13 @@ export default function TeamManagement() {
               <span className="text-[11px] font-medium text-slate-400">
                 {invitations.length} outstanding
               </span>
+
             </div>
 
             <div className="divide-y divide-slate-50">
               {invitations.length === 0 ? (
+
+
                 <p className="py-5 text-center text-xs text-slate-400">
                   No pending invitations.
                 </p>
@@ -857,14 +863,17 @@ export default function TeamManagement() {
                         title="Cancel invitation"
                       >
                         <Trash2 className="h-4 w-4" />
+
                       </button>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </section>
+
+                    </section>
         </div>
+
       </div>
     </div>
   );

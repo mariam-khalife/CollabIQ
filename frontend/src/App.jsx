@@ -1,16 +1,28 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
+// Layout Wrapper
+import MainLayout from "./MainLayout";
 
+// Public Page
+import Landing from "./pages/Landing";
+
+// Page Components
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
+import BuildTeam from "./pages/BuildTeam";
 import AiMatching from "./pages/AiMatching";
 import TeamManagement from "./pages/TeamManagement";
+import AiSuggestions from "./pages/AiSuggestions";
+import MyProjects from "./pages/MyProjects";
 import Notifications from "./pages/Notifications";
+import Reputation from "./pages/Reputation";
+import Settings from "./pages/Settings";
 
-import Layout from "./components/Layout";
+// Auth Pages
+import Login from "./pages/login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -21,59 +33,30 @@ function App() {
       }}
     >
       <Routes>
-        {/* Public authentication pages */}
-        <Route path="/" element={<Login />} />
+        {/* Public Landing Page */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Public / Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Pages using the global layout */}
-        <Route
-          path="/dashboard"
-          element={
-            <Layout>
-              <Dashboard />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={
-            <Layout>
-              <MyProfile />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/ai-matching"
-          element={
-            <Layout>
-              <AiMatching />
-            </Layout>
-          }
-        />
-
-        <Route
-          path="/team-management"
-          element={
-            <Layout>
-              <TeamManagement />
-            </Layout>
-          }
-        />
-        <Route
-        path="/notifications"
-        element={
-          <Layout>
-            <Notifications />
-          </Layout>
-        }
-        />
+        {/* Main Application Routes */}
+        <Route element={<MainLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<MyProfile />} />
+          <Route path="/build-team" element={<BuildTeam />} />
+          <Route path="/ai-matching" element={<AiMatching />} />
+          <Route path="/team-management" element={<TeamManagement />} />
+          <Route path="/ai-suggestions" element={<AiSuggestions />} />
+          <Route path="/my-projects" element={<MyProjects />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/reputation" element={<Reputation />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
 
         {/* Redirect unknown routes */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

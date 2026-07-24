@@ -1,42 +1,33 @@
+import React from "react";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   User,
+  UserPlus,
+  Brain,
   Users,
+  Lightbulb,
+  Rocket,
+  Bell,
+  Award,
+  Settings,
   X,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
 
 const navigationItems = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "My Profile",
-    path: "/profile",
-    icon: User,
-  },
-  {
-    label: "Team Management",
-    path: "/team-management",
-    icon: Users,
-  },
-  {
-    label: "AI Team Matching",
-    path: "/ai-matching",
-    icon: Users,
-  },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "My Profile", href: "/profile", icon: User },
+  { name: "Build New Team", href: "/build-team", icon: UserPlus },
+  { name: "AI Team Matching", href: "/ai-matching", icon: Brain },
+  { name: "Team Management", href: "/team-management", icon: Users },
+  { name: "AI Project Suggestions", href: "/ai-suggestions", icon: Lightbulb },
+  { name: "My Project", href: "/my-projects", icon: Rocket },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Reputation", href: "/reputation", icon: Award },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 function Sidebar({ isOpen, onClose }) {
-  const linkClassName = ({ isActive }) =>
-    `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-      isActive
-        ? "bg-indigo-50 text-indigo-700"
-        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-    }`;
-
   return (
     <>
       {/* Mobile background overlay */}
@@ -50,74 +41,100 @@ function Sidebar({ isOpen, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white p-6 transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between border-r border-slate-100 bg-white p-5 select-none transition-transform duration-300 md:sticky md:top-0 md:h-screen md:translate-x-0 shrink-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex min-h-0 flex-1 flex-col">
-          {/* Logo */}
-          <div className="mb-8 flex items-start justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-slate-800">
-                CollabIQ
-              </h1>
-
-              <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                Academic Excellence
-              </p>
+        <div className="flex flex-col min-h-0 flex-1 space-y-6">
+          {/* Logo & Header */}
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-100 shrink-0">
+                <Rocket className="w-5 h-5 fill-current" />
+              </div>
+              <div>
+                <h1 className="text-base font-black text-slate-800 leading-tight tracking-tight">
+                  CollabIQ
+                </h1>
+                <p className="text-[10px] text-slate-400 font-semibold tracking-wide">
+                  Academic Excellence
+                </p>
+              </div>
             </div>
 
+            {/* Mobile Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:hidden"
               aria-label="Close navigation menu"
             >
-              <X className="h-5 w-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 overflow-y-auto">
+          {/* Navigation Items */}
+          <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
 
               return (
                 <NavLink
-                  key={item.path}
-                  to={item.path}
+                  key={item.name}
+                  to={item.href}
                   onClick={onClose}
-                  className={linkClassName}
+                  className={({ isActive }) =>
+                    `relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                      isActive
+                        ? "bg-indigo-50/80 text-indigo-600 font-bold"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                    }`
+                  }
                 >
-                  <Icon className="h-[18px] w-[18px]" />
-                  <span>{item.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      {/* Active Indicator Line */}
+                      {isActive && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-indigo-600 rounded-r-full" />
+                      )}
+
+                      <Icon
+                        className={`w-4 h-4 shrink-0 transition-colors ${
+                          isActive
+                            ? "text-indigo-600"
+                            : "text-slate-400 group-hover:text-slate-600"
+                        }`}
+                      />
+                      <span className="truncate">{item.name}</span>
+                    </>
+                  )}
                 </NavLink>
               );
             })}
           </nav>
+        </div>
 
-          {/* Current user */}
-          <div className="mt-6 border-t border-slate-200 pt-4">
-            <NavLink
-              to="/profile"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                U
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-800">
-                  Current User
-                </p>
-
-                <p className="truncate text-xs text-slate-400">
-                  View profile
-                </p>
-              </div>
-            </NavLink>
-          </div>
+        {/* User Profile Footer */}
+        <div className="pt-4 border-t border-slate-100 mt-auto">
+          <NavLink
+            to="/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 p-1.5 rounded-xl transition-colors hover:bg-slate-50 group"
+          >
+            <img
+              src="https://i.pravatar.cc/150?img=68"
+              alt="Alex Chen"
+              className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+            />
+            <div className="overflow-hidden min-w-0">
+              <p className="text-xs font-bold text-slate-800 truncate leading-tight group-hover:text-indigo-600 transition-colors">
+                Alex Chen
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                Computer Science
+              </p>
+            </div>
+          </NavLink>
         </div>
       </aside>
     </>
