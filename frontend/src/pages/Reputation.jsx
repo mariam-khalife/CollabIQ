@@ -1,9 +1,20 @@
+// src/pages/Reputation.jsx
 import React, { useState } from "react";
-import { Search, HelpCircle, Bell, TrendingUp, Star } from "lucide-react";
+import {
+  TrendingUp,
+  Star,
+  Award,
+  Users,
+  Target,
+  Zap,
+  Crown,
+  Medal,
+  Sparkles,
+  CheckCircle2,
+} from "lucide-react";
 
 const Reputation = () => {
-  // State ready for backend API integration
-  const [reputationData, setReputationData] = useState({
+  const [reputationData] = useState({
     tier: "ELITE RESEARCHER",
     score: 2840,
     monthlyGain: 142,
@@ -11,14 +22,13 @@ const Reputation = () => {
     currentLevel: 8,
     nextLevel: 9,
     nextLevelPts: 3000,
-    currentLevelPts: 2000, // level 8 start threshold
+    currentLevelPts: 2000,
   });
 
-  // Mentorship rating state (1-5 stars)
   const [rating, setRating] = useState(4);
   const [hoverRating, setHoverRating] = useState(0);
 
-  // Calculate dynamic progress percentage for the progress bar
+  // Calculate progress percentage
   const progressPercentage = Math.min(
     100,
     Math.max(
@@ -31,129 +41,161 @@ const Reputation = () => {
 
   const handleRatingChange = (newRating) => {
     setRating(newRating);
-    // Backend API hook point:
-    // API.post('/reputation/mentorship-rating', { rating: newRating })
   };
 
   return (
-    <div className="flex-1 bg-slate-50/50 min-h-screen">
-      {/* Top Navigation Header */}
-      <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
-        <div className="relative w-96">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search insights, metrics, or teams..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-100/70 border border-transparent rounded-full text-xs focus:outline-none focus:bg-white focus:border-indigo-600 transition-all text-slate-700 placeholder:text-slate-400"
-          />
-        </div>
-
-        <div className="flex items-center gap-4">
-          <button className="text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-            <HelpCircle className="w-5 h-5" />
-          </button>
-
-          <button className="relative text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="p-8 space-y-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Main Reputation Score Banner (Left) */}
-          <div className="lg:col-span-8 bg-indigo-600 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[260px]">
-            {/* Top Row: Tier badge & Percentile */}
-            <div className="flex items-start justify-between">
-              <span className="px-3.5 py-1.5 bg-white/10 backdrop-blur-md text-[10px] font-extrabold tracking-wider rounded-full border border-white/20 uppercase">
-                CURRENT TIER: {reputationData.tier}
-              </span>
-              <div className="text-right">
-                <p className="text-[10px] font-medium text-indigo-200">
-                  Percentile
-                </p>
-                <p className="text-2xl font-black tracking-tight">
-                  {reputationData.percentile}
-                </p>
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Main Reputation Card - Spans 2 columns */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/30 relative overflow-hidden min-h-[320px]">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/20 rounded-full blur-2xl -ml-16 -mb-16" />
+          
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            {/* Top Row: Tier & Percentile */}
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
+                    Current Tier
+                  </p>
+                  <span className="px-3.5 py-1 bg-white/10 backdrop-blur-md text-xs font-extrabold tracking-wider rounded-full border border-white/20 inline-block">
+                    {reputationData.tier}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10">
+                <p className="text-[10px] font-medium text-indigo-200">Percentile</p>
+                <p className="text-xl font-black tracking-tight">{reputationData.percentile}</p>
               </div>
             </div>
 
             {/* Middle Row: Big Score */}
             <div className="my-4">
-              <h1 className="text-sm font-bold text-indigo-200 mb-1">
-                Reputation Score
-              </h1>
-              <div className="flex items-baseline gap-4">
-                <span className="text-6xl font-black tracking-tight">
+              <p className="text-sm font-bold text-indigo-200 mb-1">Reputation Score</p>
+              <div className="flex flex-wrap items-baseline gap-3 sm:gap-6">
+                <span className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight">
                   {reputationData.score.toLocaleString()}
                 </span>
-                <span className="flex items-center gap-1 text-emerald-400 text-xs font-extrabold bg-emerald-500/20 px-2.5 py-1 rounded-full border border-emerald-400/30">
-                  <TrendingUp className="w-3.5 h-3.5" />+{reputationData.monthlyGain}
-                  <span className="text-[10px] font-normal text-indigo-200">
+                <span className="flex items-center gap-1.5 text-emerald-400 text-sm font-extrabold bg-emerald-500/20 px-3 py-1.5 rounded-full border border-emerald-400/30">
+                  <TrendingUp className="w-4 h-4" />
+                  +{reputationData.monthlyGain}
+                  <span className="text-[10px] font-normal text-indigo-200 ml-1">
                     This Month
                   </span>
                 </span>
               </div>
             </div>
 
-            {/* Bottom Row: Level Progress Bar */}
+            {/* Bottom Row: Level Progress */}
             <div className="space-y-2">
-              <div className="w-full bg-indigo-900/40 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/10">
-                <div
-                  className="bg-white h-full rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[11px] font-semibold text-indigo-200">
-                <span>Level {reputationData.currentLevel}</span>
+              <div className="flex justify-between text-xs font-semibold text-indigo-200">
+                <span className="flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5" />
+                  Level {reputationData.currentLevel}
+                </span>
                 <span>
                   Level {reputationData.nextLevel} (
                   {reputationData.nextLevelPts.toLocaleString()} pts)
                 </span>
               </div>
+              <div className="w-full bg-indigo-900/40 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/10">
+                <div
+                  className="bg-gradient-to-r from-indigo-300 to-white h-full rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <p className="text-xs text-indigo-300 text-right">
+                {Math.round(progressPercentage)}% to next level
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Peer Impact Card (Right) */}
-          <div className="lg:col-span-4 bg-white rounded-3xl p-8 border border-slate-100 shadow-xs space-y-6 min-h-[260px] flex flex-col justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold text-indigo-950 tracking-tight">
+        {/* Peer Impact Card - 1 column */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm flex flex-col justify-between min-h-[320px]">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl">
+                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
                 Peer Impact
               </h2>
             </div>
 
-            {/* Mentorship Interactive Rating */}
+            {/* Mentorship Rating */}
             <div className="space-y-3">
-              <p className="text-xs font-bold text-slate-700">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                 Mentorship Rating
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     onClick={() => handleRatingChange(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    className="cursor-pointer transition-transform hover:scale-110 focus:outline-none"
+                    className="cursor-pointer transition-all hover:scale-110 focus:outline-none p-1"
                   >
                     <Star
-                      className={`w-6 h-6 ${
+                      className={`w-7 h-7 transition-colors ${
                         star <= (hoverRating || rating)
-                          ? "fill-indigo-600 text-indigo-600"
-                          : "text-slate-200"
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-slate-200 dark:text-slate-700"
                       }`}
                     />
                   </button>
                 ))}
               </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {rating === 5 && "⭐ Outstanding mentor!"}
+                {rating === 4 && "🌟 Excellent guidance!"}
+                {rating === 3 && "👍 Good mentor!"}
+                {rating === 2 && "📚 Needs improvement"}
+                {rating === 1 && "💪 Room for growth"}
+              </p>
             </div>
+          </div>
 
-            <div />
+          {/* Quick Stats */}
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500 dark:text-slate-400">Mentorship Sessions</span>
+              <span className="font-bold text-slate-900 dark:text-white">24</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-1">
+              <span className="text-slate-500 dark:text-slate-400">Peer Reviews Given</span>
+              <span className="font-bold text-slate-900 dark:text-white">38</span>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+        {[
+          { icon: Award, label: "Publications", value: "24" },
+          { icon: Users, label: "Teams", value: "5" },
+          { icon: Target, label: "Projects", value: "12" },
+          { icon: Zap, label: "AI Matches", value: "45" },
+        ].map((stat, index) => (
+          <div
+            key={index}
+            className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/60 dark:border-slate-800 shadow-sm text-center hover:shadow-md transition-all"
+          >
+            <stat.icon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mx-auto mb-2" />
+            <p className="text-xl font-black text-slate-900 dark:text-white">{stat.value}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

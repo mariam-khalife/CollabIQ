@@ -8,14 +8,13 @@ import {
   BookOpen,
   Mail,
   Lock,
-  RotateCcw,
   Eye,
   EyeOff,
   ArrowRight,
-  HelpCircle,
+  AlertCircle,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
-
-import "../styles/auth.css";
 
 function Register() {
   const navigate = useNavigate();
@@ -34,6 +33,7 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Handlers
   const handleChange = (e) => {
@@ -47,6 +47,8 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
 
     if (!form.fullName.trim()) {
       setErrorMessage("Please enter your full name.");
@@ -100,7 +102,11 @@ function Register() {
       );
 
       console.log("Registration successful:", response.data);
-      navigate("/login");
+      setSuccessMessage("Account created successfully! Redirecting to login...");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (error) {
       console.error("Registration error:", error);
 
@@ -120,7 +126,6 @@ function Register() {
             return `${field}: ${item.msg}`;
           })
           .join(" | ");
-
         setErrorMessage(validationMessages);
         return;
       }
@@ -142,45 +147,58 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/70 flex flex-col justify-center items-center p-6 relative font-sans selection:bg-indigo-100 selection:text-indigo-600">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20 flex flex-col justify-center items-center p-4 sm:p-6 relative font-sans selection:bg-indigo-100 selection:text-indigo-600 transition-colors duration-200">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/5 rounded-full blur-3xl -mr-48 -mt-48" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-200/20 dark:bg-purple-500/5 rounded-full blur-3xl -ml-48 -mb-48" />
+
       {/* Top Branding Header */}
-      <div className="text-center mb-6 space-y-2">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 mb-1">
-          <Rocket className="w-6 h-6" />
+      <div className="text-center mb-6 space-y-2 relative z-10">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30">
+          <Rocket className="w-7 h-7" />
         </div>
-        <h1 className="text-2xl font-black text-indigo-950 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
           CollabIQ
         </h1>
-        <p className="text-xs font-bold text-slate-400 tracking-wide max-w-xs mx-auto leading-relaxed">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide max-w-xs mx-auto">
           Join the academic excellence network and build your future team.
         </p>
       </div>
 
       {/* Registration Card */}
-      <div className="w-full max-w-lg bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 space-y-6">
+      <div className="w-full max-w-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 space-y-5 relative z-10 transition-all">
         <div className="space-y-1">
-          <h2 className="text-xl font-extrabold text-slate-800">
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
             Create your account
           </h2>
-          <p className="text-xs font-semibold text-slate-400">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Start your collaborative journey today.
           </p>
         </div>
 
+        {/* Error/Success Messages */}
         {errorMessage && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-600">
-            {errorMessage}
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 rounded-xl text-sm font-bold text-rose-600 dark:text-rose-400 flex items-start gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-start gap-2 animate-fade-in">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{successMessage}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Full Name */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700">
-              Full Name
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              Full Name <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 name="fullName"
@@ -188,57 +206,55 @@ function Register() {
                 placeholder="Enter your full name"
                 value={form.fullName}
                 onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
               />
             </div>
           </div>
 
           {/* University & Major Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* University */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 University
               </label>
               <div className="relative">
-                <GraduationCap className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <GraduationCap className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   name="university"
                   placeholder="Your University"
                   value={form.university}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
                 />
               </div>
             </div>
 
-            {/* Major */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 Major
               </label>
               <div className="relative">
-                <BookOpen className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <BookOpen className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   name="major"
                   placeholder="e.g. Computer Science"
                   value={form.major}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
                 />
               </div>
             </div>
           </div>
 
-          {/* Institutional Email */}
+          {/* Email */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700">
-              Institutional Email
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+              Institutional Email <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="email"
                 name="email"
@@ -246,20 +262,19 @@ function Register() {
                 placeholder="student@university.edu"
                 value={form.email}
                 onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
               />
             </div>
           </div>
 
           {/* Password & Confirm Password Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Password */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                Password
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -267,29 +282,25 @@ function Register() {
                   placeholder="••••••••"
                   value={form.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                Confirm Password
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Confirm Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <RotateCcw className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <RefreshCw className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
@@ -297,45 +308,42 @@ function Register() {
                   placeholder="••••••••"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white dark:focus:bg-slate-800 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Terms & Conditions Checkbox */}
-          <div className="flex items-center pt-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+          <div className="flex items-center pt-1">
+            <label className="flex items-start gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 name="agreeToTerms"
                 checked={form.agreeToTerms}
                 onChange={handleChange}
-                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
+                className="w-4 h-4 mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
               />
-              <span className="text-[11px] font-semibold text-slate-600">
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
                 I agree to the{" "}
                 <a
                   href="#terms"
-                  className="text-indigo-600 font-extrabold hover:underline"
+                  className="text-indigo-600 dark:text-indigo-400 font-extrabold hover:underline"
                 >
                   Terms of Service
                 </a>{" "}
                 and{" "}
                 <a
                   href="#privacy"
-                  className="text-indigo-600 font-extrabold hover:underline"
+                  className="text-indigo-600 dark:text-indigo-400 font-extrabold hover:underline"
                 >
                   Privacy Policy
                 </a>
@@ -348,21 +356,30 @@ function Register() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-600/20 disabled:opacity-70 flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:scale-[0.98] text-white text-sm font-extrabold rounded-xl transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:shadow-indigo-600/30 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-1"
           >
-            <span>{isLoading ? "Creating Account..." : "Create Account"}</span>
-            {!isLoading && <ArrowRight className="w-4 h-4" />}
+            {isLoading ? (
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Creating Account...
+              </>
+            ) : (
+              <>
+                Create Account
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
         {/* Divider */}
-        <div className="relative my-6">
+        <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-100" />
+            <div className="w-full border-t border-slate-200 dark:border-slate-700" />
           </div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-            <span className="bg-white px-3 text-slate-400">
-              or register with
+          <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
+            <span className="bg-white/80 dark:bg-slate-900/80 px-4 text-slate-400 dark:text-slate-500">
+              Or register with
             </span>
           </div>
         </div>
@@ -372,9 +389,9 @@ function Register() {
           <button
             type="button"
             onClick={() => handleSocialRegister("google")}
-            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-xs font-extrabold text-slate-700 cursor-pointer"
+            className="flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-bold text-slate-700 dark:text-slate-300 hover:shadow-sm"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -398,29 +415,24 @@ function Register() {
           <button
             type="button"
             onClick={() => handleSocialRegister("eduid")}
-            className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-xs font-extrabold text-slate-700 cursor-pointer"
+            className="flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-bold text-slate-700 dark:text-slate-300 hover:shadow-sm"
           >
-            <GraduationCap className="w-4 h-4 text-slate-800" />
+            <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             EduID
           </button>
         </div>
-      </div>
 
-      {/* Bottom Login Link */}
-      <div className="mt-8 text-center text-xs font-semibold text-slate-500">
-        Already have an account?{" "}
-        <Link
-          to="/login"
-          className="font-extrabold text-indigo-600 hover:text-indigo-800 transition-colors"
-        >
-          Sign In
-        </Link>
+        {/* Login Link */}
+        <div className="text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="font-extrabold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors hover:underline"
+          >
+            Sign In
+          </Link>
+        </div>
       </div>
-
-      {/* Help Circle Floating Button */}
-      <button className="fixed bottom-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-white/80 border border-transparent hover:border-slate-200 cursor-pointer">
-        <HelpCircle className="w-5 h-5" />
-      </button>
     </div>
   );
 }
