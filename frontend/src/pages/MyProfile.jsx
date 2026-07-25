@@ -11,6 +11,13 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  Sparkles,
+  Briefcase,
+  MapPin,
+  Loader2,
+  X,
+  Plus,
+  PenTool,
 } from "lucide-react";
 
 const API_URL = "http://127.0.0.1:8000";
@@ -66,7 +73,7 @@ export default function MyProfile() {
           setSkills(
             Array.isArray(data.skills)
               ? data.skills
-              : data.skills.split(",").map((s) => s.trim())
+              : data.skills.split(",").map((s) => s.trim()).filter(Boolean)
           );
         }
 
@@ -74,12 +81,15 @@ export default function MyProfile() {
           setInterests(
             Array.isArray(data.interests)
               ? data.interests
-              : data.interests.split(",").map((i) => i.trim())
+              : data.interests.split(",").map((i) => i.trim()).filter(Boolean)
           );
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
-        setMessage({ type: "error", text: "Failed to load profile details." });
+        setMessage({ 
+          type: "error", 
+          text: error.response?.data?.detail || "Failed to load profile details." 
+        });
       } finally {
         setLoading(false);
       }
@@ -91,6 +101,7 @@ export default function MyProfile() {
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
+    if (message.text) setMessage({ type: "", text: "" });
   };
 
   const handleAddSkill = () => {
@@ -142,7 +153,12 @@ export default function MyProfile() {
         }
       );
 
-      setMessage({ type: "success", text: "Profile updated successfully!" });
+      setMessage({ type: "success", text: "Profile updated successfully! 🎉" });
+      
+      // Auto-dismiss success message after 4 seconds
+      setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 4000);
     } catch (error) {
       console.error("Error saving profile:", error);
       setMessage({
@@ -154,25 +170,66 @@ export default function MyProfile() {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((part) => part.charAt(0))
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
+  const getExperienceLevelBadge = (level) => {
+    const colors = {
+      Beginner: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      Intermediate: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+      Advanced: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      Expert: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    };
+    return colors[level] || colors.Intermediate;
+  };
+
+  const getAvailabilityBadge = (availability) => {
+    const colors = {
+      "Flexible": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+      "Part-time (10-15 hrs/wk)": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      "Full-time (20+ hrs/wk)": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      "Weekends Only": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    };
+    return colors[availability] || colors["Flexible"];
+  };
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-sm font-semibold text-slate-500">Loading profile...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+            Loading profile...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-50/50 p-4 text-slate-800 font-sans sm:p-6 lg:p-8">
-      <main className="mx-auto max-w-4xl space-y-6">
+    <div className="flex-1 bg-slate-50/50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
+      <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 sm:text-2xl tracking-tight">
-              My Profile
-            </h1>
-            <p className="text-xs text-slate-500 sm:text-sm">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                My Profile
+              </h1>
+              <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full border border-indigo-100 dark:border-indigo-800/50 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Academic
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Manage your academic identity, skills, and project preferences.
             </p>
           </div>
@@ -181,26 +238,35 @@ export default function MyProfile() {
             type="button"
             onClick={handleSaveProfile}
             disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save Profile"}
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Profile
+              </>
+            )}
           </button>
         </div>
 
         {/* Success/Error Alert */}
         {message.text && (
           <div
-            className={`flex items-center gap-3 rounded-xl p-4 text-xs font-semibold ${
+            className={`flex items-start gap-3 rounded-2xl p-4 text-sm font-semibold animate-fade-in ${
               message.type === "success"
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "bg-rose-50 text-rose-700 border border-rose-200"
+                ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"
+                : "bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50"
             }`}
           >
             {message.type === "success" ? (
-              <CheckCircle className="h-4 w-4 shrink-0" />
+              <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="h-4 w-4 shrink-0" />
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
             )}
             <span>{message.text}</span>
           </div>
@@ -208,16 +274,47 @@ export default function MyProfile() {
 
         <form onSubmit={handleSaveProfile} className="space-y-6">
           
-          {/* General Information Section */}
-          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Personal Information
-            </h2>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Profile Header Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-indigo-500/30">
+                {getInitials(profile.full_name)}
+              </div>
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <User className="h-3.5 w-3.5 text-slate-400" /> Full Name
+                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+                  {profile.full_name || "Your Name"}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${getExperienceLevelBadge(profile.experience_level)}`}>
+                    {profile.experience_level}
+                  </span>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${getAvailabilityBadge(profile.availability)}`}>
+                    {profile.availability}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+                  {profile.email}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* General Information Section */}
+          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
+                <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Personal Information
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <User className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
+                  Full Name
                 </label>
                 <input
                   type="text"
@@ -225,13 +322,14 @@ export default function MyProfile() {
                   value={profile.full_name}
                   onChange={handleProfileChange}
                   placeholder="John Doe"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Mail className="h-3.5 w-3.5 text-slate-400" /> Email Address
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
+                  Email Address
                 </label>
                 <input
                   type="email"
@@ -239,13 +337,14 @@ export default function MyProfile() {
                   value={profile.email}
                   onChange={handleProfileChange}
                   disabled
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 cursor-not-allowed outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/30 px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <GraduationCap className="h-3.5 w-3.5 text-slate-400" /> University / Institution
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <GraduationCap className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
+                  University / Institution
                 </label>
                 <input
                   type="text"
@@ -253,46 +352,49 @@ export default function MyProfile() {
                   value={profile.university}
                   onChange={handleProfileChange}
                   placeholder="e.g. Stanford University"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" /> Availability
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
+                  Availability
                 </label>
                 <select
                   name="availability"
                   value={profile.availability}
                   onChange={handleProfileChange}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
                 >
-                  <option value="Flexible">Flexible</option>
-                  <option value="Part-time (10-15 hrs/wk)">Part-time (10-15 hrs/wk)</option>
-                  <option value="Full-time (20+ hrs/wk)">Full-time (20+ hrs/wk)</option>
-                  <option value="Weekends Only">Weekends Only</option>
+                  <option value="Flexible">🔄 Flexible</option>
+                  <option value="Part-time (10-15 hrs/wk)">⏳ Part-time (10-15 hrs/wk)</option>
+                  <option value="Full-time (20+ hrs/wk)">💪 Full-time (20+ hrs/wk)</option>
+                  <option value="Weekends Only">📅 Weekends Only</option>
                 </select>
               </div>
 
               <div className="sm:col-span-2">
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Award className="h-3.5 w-3.5 text-slate-400" /> Experience Level
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Award className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
+                  Experience Level
                 </label>
                 <select
                   name="experience_level"
                   value={profile.experience_level}
                   onChange={handleProfileChange}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
                 >
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                  <option value="Expert">Expert</option>
+                  <option value="Beginner">🌱 Beginner</option>
+                  <option value="Intermediate">📈 Intermediate</option>
+                  <option value="Advanced">🚀 Advanced</option>
+                  <option value="Expert">🏆 Expert</option>
                 </select>
               </div>
 
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <PenTool className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
                   Bio / Background
                 </label>
                 <textarea
@@ -301,21 +403,28 @@ export default function MyProfile() {
                   value={profile.bio}
                   onChange={handleProfileChange}
                   placeholder="Describe your background, skills, and goals..."
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
           </section>
 
           {/* Skills Section */}
-          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700">
-                <Star className="h-4 w-4" />
-                <span>Skills</span>
+          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
+                <Star className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Skills & Expertise
+              </h2>
+              <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500">
+                {skills.length} skills
+              </span>
+            </div>
 
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <div className="flex-1">
                 <input
                   type="text"
                   value={newSkill}
@@ -327,45 +436,55 @@ export default function MyProfile() {
                     }
                   }}
                   placeholder="Add a skill (e.g. React, Python)"
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddSkill}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
+              >
+                <Plus className="h-4 w-4" />
+                Add Skill
+              </button>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleAddSkill}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill, index) => (
+                <span
+                  key={index}
+                  onClick={() => handleDeleteSkill(skill)}
+                  className="group cursor-pointer rounded-full bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-all border border-indigo-100 dark:border-indigo-800/50 hover:border-rose-200 dark:hover:border-rose-800/50 flex items-center gap-1.5"
+                  title="Click to remove"
                 >
-                  Add Skill
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    onClick={() => handleDeleteSkill(skill)}
-                    className="cursor-pointer rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-rose-100 hover:text-rose-700 transition-colors"
-                    title="Click to remove"
-                  >
-                    {skill} &times;
-                  </span>
-                ))}
-                {skills.length === 0 && (
-                  <p className="text-xs italic text-slate-400">No skills added yet.</p>
-                )}
-              </div>
+                  {skill}
+                  <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                </span>
+              ))}
+              {skills.length === 0 && (
+                <p className="text-sm italic text-slate-400 dark:text-slate-500">
+                  No skills added yet. Add your first skill above!
+                </p>
+              )}
             </div>
           </section>
 
           {/* Research Interests Section */}
-          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700">
-                <BookOpen className="h-4 w-4" />
-                <span>Research & Academic Interests</span>
+          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
+                <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Research & Academic Interests
+              </h2>
+              <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500">
+                {interests.length} interests
+              </span>
+            </div>
 
-              <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              <div className="flex-1">
                 <input
                   type="text"
                   value={newInterest}
@@ -377,35 +496,62 @@ export default function MyProfile() {
                     }
                   }}
                   placeholder="Add an interest (e.g. Machine Learning, NLP)"
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
+              </div>
+              <button
+                type="button"
+                onClick={handleAddInterest}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
+              >
+                <Plus className="h-4 w-4" />
+                Add Interest
+              </button>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleAddInterest}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
+            <div className="flex flex-wrap gap-2">
+              {interests.map((interest, index) => (
+                <span
+                  key={index}
+                  onClick={() => handleDeleteInterest(interest)}
+                  className="group cursor-pointer rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-3.5 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-all border border-emerald-100 dark:border-emerald-800/50 hover:border-rose-200 dark:hover:border-rose-800/50 flex items-center gap-1.5"
+                  title="Click to remove"
                 >
-                  Add Interest
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {interests.map((interest, index) => (
-                  <span
-                    key={index}
-                    onClick={() => handleDeleteInterest(interest)}
-                    className="cursor-pointer rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-rose-100 hover:text-rose-700 transition-colors"
-                    title="Click to remove"
-                  >
-                    {interest} &times;
-                  </span>
-                ))}
-                {interests.length === 0 && (
-                  <p className="text-xs italic text-slate-400">No interests added yet.</p>
-                )}
-              </div>
+                  {interest}
+                  <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                </span>
+              ))}
+              {interests.length === 0 && (
+                <p className="text-sm italic text-slate-400 dark:text-slate-500">
+                  No interests added yet. Add your first interest above!
+                </p>
+              )}
             </div>
           </section>
+
+          {/* Save Button Footer */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Your profile information is visible to potential collaborators
+            </p>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Profile
+                </>
+              )}
+            </button>
+          </div>
 
         </form>
       </main>
