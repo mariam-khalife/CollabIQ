@@ -3,7 +3,7 @@ import { Brain, Sparkles, Users, ArrowRight, Zap } from "lucide-react";
 
 const AIInsightCard = ({ insight, onFindMatch }) => {
   const defaultInsight = {
-    title: "AI Insight: Team Synergy",
+    title: "AI Team Gap Analysis",
     message: (
       <>
         Based on your project goals, your team needs a{" "}
@@ -51,7 +51,7 @@ const AIInsightCard = ({ insight, onFindMatch }) => {
           className="w-full mt-4 py-2.5 bg-white text-indigo-600 dark:text-indigo-700 font-extrabold text-sm rounded-xl hover:bg-indigo-50 transition-all cursor-pointer shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group"
         >
           <Users className="w-4 h-4 transition-transform group-hover:scale-110" />
-          Find Match
+          Find Recommended Teammates
           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>

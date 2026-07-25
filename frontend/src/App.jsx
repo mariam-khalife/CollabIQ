@@ -1,55 +1,19 @@
-import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-// Layout Wrapper
-import MainLayout from "./MainLayout";
-
-// Public Page
-import Landing from "./pages/Landing";
-
-// Page Components
-import Dashboard from "./pages/Dashboard";
-import MyProfile from "./pages/MyProfile";
-import BuildTeam from "./pages/BuildTeam";
-import AiMatching from "./pages/AiMatching";
-import TeamManagement from "./pages/TeamManagement";
-import AiSuggestions from "./pages/AiSuggestions";
-import MyProjects from "./pages/MyProjects";
-import Notifications from "./pages/Notifications";
-import Reputation from "./pages/Reputation";
-import Settings from "./pages/Settings";
-
-// Auth Pages
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 
-// Scroll to top on route change
-function ScrollToTop() {
-  const { pathname } = useLocation();
+import Dashboard from "./pages/Dashboard";
+import MyProfile from "./pages/MyProfile";
+import AiMatching from "./pages/AiMatching";
+import TeamManagement from "./pages/TeamManagement";
+import Notifications from "./pages/Notifications";
+import MyProjects from "./pages/MyProjects";
+import Reputation from "./pages/Reputation";
+import Settings from "./pages/Settings";
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [pathname]);
-
-  return null;
-}
-
-// Document title updater
-function UpdateTitle() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    const pageName = pathname === "/" 
-      ? "Home" 
-      : pathname.replace("/", "").charAt(0).toUpperCase() + 
-        pathname.replace("/", "").slice(1).replace("-", " ");
-    
-    document.title = `CollabIQ${pageName !== "Home" ? ` | ${pageName}` : ""}`;
-  }, [pathname]);
-
-  return null;
-}
+import Layout from "./components/Layout";
 
 function App() {
   return (
@@ -59,37 +23,88 @@ function App() {
         v7_relativeSplatPath: true,
       }}
     >
-      <ScrollToTop />
-      <UpdateTitle />
-      
       <Routes>
-        {/* Public Landing Page */}
-        <Route path="/" element={<Landing />} />
-
-        {/* Public / Auth Routes */}
+        {/* Public authentication pages */}
+        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Main Application Routes (protected) */}
-        <Route element={<MainLayout />}>
-          {/* Redirect /app to dashboard */}
-          <Route path="/app" element={<Navigate to="/dashboard" replace />} />
-          
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<MyProfile />} />
-          <Route path="/build-team" element={<BuildTeam />} />
-          <Route path="/ai-matching" element={<AiMatching />} />
-          <Route path="/team-management" element={<TeamManagement />} />
-          <Route path="/ai-suggestions" element={<AiSuggestions />} />
-          <Route path="/my-projects" element={<MyProjects />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/reputation" element={<Reputation />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+        {/* Pages using the global layout */}
+        <Route
+          path="/dashboard"
+          element={
+            <Layout>
+              <Dashboard />
+            </Layout>
+          }
+        />
 
-        {/* 404 - Redirect to landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/profile"
+          element={
+            <Layout>
+              <MyProfile />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/ai-matching"
+          element={
+            <Layout>
+              <AiMatching />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/team-management"
+          element={
+            <Layout>
+              <TeamManagement />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/notifications"
+          element={
+            <Layout>
+              <Notifications />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/my-projects"
+          element={
+            <Layout>
+              <MyProjects />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/reputation"
+          element={
+            <Layout>
+              <Reputation />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <Layout>
+              <Settings />
+            </Layout>
+          }
+        />
+
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

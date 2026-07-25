@@ -44,7 +44,7 @@ const Roadmap = ({ roadmap, onRefresh }) => {
               <Target className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">
-              AI-Generated Roadmap
+              Project Roadmap
             </h3>
           </div>
           <span className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5">

@@ -1,18 +1,6 @@
-import React, { useState } from "react";
-import { 
-  X, 
-  Search, 
-  HelpCircle, 
-  Bell, 
-  Sparkles, 
-  Plus,
-  Filter,
-  LayoutGrid,
-  List,
-  ChevronDown,
-} from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Search, Sparkles, X } from "lucide-react";
 
-// Sub-components from your folder structure
 import ProjectCard from "../components/myProjects/ProjectCard";
 import AIInsightCard from "../components/myProjects/AIInsightCard";
 import Roadmap from "../components/myProjects/Roadmap";
@@ -20,7 +8,6 @@ import ActiveTasks from "../components/myProjects/ActiveTasks";
 import TeamMembers from "../components/myProjects/TeamMembers";
 
 const MyProjects = () => {
-  // State for Tasks
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -51,7 +38,6 @@ const MyProjects = () => {
     },
   ]);
 
-  // State for Team Members
   const [team, setTeam] = useState([
     {
       id: 1,
@@ -76,14 +62,10 @@ const MyProjects = () => {
     },
   ]);
 
-  // View state
-  const [viewMode, setViewMode] = useState("grid");
-
-  // Modal State Controls
+  const [searchQuery, setSearchQuery] = useState("");
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
-  // Form Inputs State
   const [newTask, setNewTask] = useState({
     title: "",
     category: "Development",
@@ -97,32 +79,55 @@ const MyProjects = () => {
     role: "Collaborator",
   });
 
-  // Helpers & Handlers
+  const filteredTasks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return tasks;
+    }
+
+    return tasks.filter((task) => {
+      return (
+        task.title.toLowerCase().includes(query) ||
+        task.category.toLowerCase().includes(query) ||
+        task.assignedName.toLowerCase().includes(query)
+      );
+    });
+  }, [searchQuery, tasks]);
+
   const formatDate = (rawDate) => {
-    if (!rawDate) return "Nov 15, 2026";
-    const dateObj = new Date(rawDate);
-    return dateObj.toLocaleDateString("en-US", {
+    if (!rawDate) {
+      return "Nov 15, 2026";
+    }
+
+    const date = new Date(rawDate);
+
+    return date.toLocaleDateString("en-US", {
       month: "short",
       day: "2-digit",
       year: "numeric",
     });
   };
 
-  const handleAddTask = (e) => {
-    e.preventDefault();
-    if (!newTask.title.trim()) return;
+  const handleAddTask = (event) => {
+    event.preventDefault();
+
+    if (!newTask.title.trim()) {
+      return;
+    }
 
     const createdTask = {
       id: Date.now(),
-      title: newTask.title,
-      category: newTask.category,
+      title: newTask.title.trim(),
+      category: newTask.category.trim() || "General",
       assignedName: newTask.assignedName,
       deadline: formatDate(newTask.deadline),
       priority: newTask.priority,
       assignedAvatar: "https://i.pravatar.cc/150?img=12",
     };
 
-    setTasks([createdTask, ...tasks]);
+    setTasks((currentTasks) => [createdTask, ...currentTasks]);
+
     setNewTask({
       title: "",
       category: "Development",
@@ -130,129 +135,100 @@ const MyProjects = () => {
       deadline: "",
       priority: "MEDIUM",
     });
+
     setIsTaskModalOpen(false);
   };
 
-  const handleInviteCollaborator = (e) => {
-    e.preventDefault();
-    if (!newInvite.name.trim()) return;
+  const handleInviteCollaborator = (event) => {
+    event.preventDefault();
+
+    if (!newInvite.name.trim() || !newInvite.role.trim()) {
+      return;
+    }
 
     const newMember = {
       id: Date.now(),
-      name: newInvite.name,
-      role: newInvite.role,
+      name: newInvite.name.trim(),
+      role: newInvite.role.trim(),
       contrib: "0%",
-      avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 1}`,
+      avatar: `https://i.pravatar.cc/150?img=${
+        Math.floor(Math.random() * 50) + 1
+      }`,
     };
 
-    setTeam([...team, newMember]);
+    setTeam((currentTeam) => [...currentTeam, newMember]);
     setNewInvite({ name: "", role: "Collaborator" });
     setIsInviteModalOpen(false);
   };
 
   const handleDeleteTask = (id) => {
-    setTasks(tasks.filter((t) => t.id !== id));
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "URGENT":
-        return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
-      case "MEDIUM":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-      case "LOW":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
-      default:
-        return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
-    }
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== id)
+    );
   };
 
   return (
-    <div className="flex-1 bg-slate-50/50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
-      {/* Top Header Navbar */}
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-30 transition-colors">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            My Project Workspace
-          </h1>
-          <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full border border-indigo-100 dark:border-indigo-800/50 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            AI Enhanced
-          </span>
-        </div>
+    <div className="min-h-full text-slate-800 dark:text-slate-100">
+      <main className="mx-auto max-w-7xl space-y-6">
+        {/* Page heading */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                My Project
+              </h1>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              <span className="flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Team Analysis
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Manage your project roadmap, tasks, team members, and AI-powered
+              staffing recommendations.
+            </p>
+          </div>
+
+          <div className="relative w-full lg:w-80">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
             <input
-              type="text"
-              placeholder="Search milestones or tasks"
-              className="w-full pl-9 pr-4 py-2 bg-slate-100/70 dark:bg-slate-800/70 border border-transparent rounded-xl text-sm focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-600 dark:focus:border-indigo-400 transition-all text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              type="search"
+              placeholder="Search tasks or team members..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-indigo-950"
             />
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === "grid"
-                  ? "bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
-                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === "list"
-                  ? "bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
-                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              }`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-
-          <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
-            <HelpCircle className="w-5 h-5" />
-          </button>
-
-          <button className="relative text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-indigo-600 rounded-full ring-2 ring-white dark:ring-slate-900" />
-          </button>
-
-          <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-700">
-            <img
-              src="https://i.pravatar.cc/150?img=68"
-              alt="User"
-              className="w-8 h-8 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700"
-            />
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              John D.
-            </span>
           </div>
         </div>
-      </header>
 
-      {/* Main Grid Workspace */}
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 space-y-6">
+        {/* Project overview and roadmap */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-5">
             <ProjectCard />
-            <AIInsightCard onFindMatch={() => alert("Searching AI matches...")} />
+
+            <AIInsightCard
+              onFindMatch={() =>
+                alert("Opening recommended teammate suggestions...")
+              }
+            />
           </div>
 
           <div className="lg:col-span-7">
-            <Roadmap onRefresh={() => alert("Fetching updated roadmap...")} />
+            <Roadmap
+              onRefresh={() =>
+                alert("Refreshing the project roadmap...")
+              }
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Tasks and team */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-8">
             <ActiveTasks
-              tasks={tasks}
+              tasks={filteredTasks}
               onAddTaskClick={() => setIsTaskModalOpen(true)}
               onDeleteTask={handleDeleteTask}
             />
@@ -265,96 +241,141 @@ const MyProjects = () => {
             />
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Add Task Modal */}
       {isTaskModalOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsTaskModalOpen(false);
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm dark:bg-slate-950/80"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsTaskModalOpen(false);
+            }
           }}
         >
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200/60 dark:border-slate-800 space-y-5 animate-slide-in">
-            <div className="flex items-center justify-between">
+          <div className="w-full max-w-md space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   Add New Task
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Create a new task for your project
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Add a task to the selected project roadmap.
                 </p>
               </div>
+
               <button
+                type="button"
                 onClick={() => setIsTaskModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                aria-label="Close task form"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddTask} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Task Name <span className="text-rose-500">*</span>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Task name
                 </label>
+
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Implement Authentication"
+                  placeholder="Example: Implement authentication"
                   value={newTask.title}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, title: e.target.value })
+                  onChange={(event) =>
+                    setNewTask({
+                      ...newTask,
+                      title: event.target.value,
+                    })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Category
                 </label>
+
                 <input
                   type="text"
-                  placeholder="e.g. Frontend Optimization"
+                  placeholder="Example: Backend development"
                   value={newTask.category}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, category: e.target.value })
+                  onChange={(event) =>
+                    setNewTask({
+                      ...newTask,
+                      category: event.target.value,
+                    })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Assigned member
+                </label>
+
+                <select
+                  value={newTask.assignedName}
+                  onChange={(event) =>
+                    setNewTask({
+                      ...newTask,
+                      assignedName: event.target.value,
+                    })
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  {team.map((member) => (
+                    <option key={member.id} value={member.name}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Due Date <span className="text-rose-500">*</span>
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Deadline
                   </label>
+
                   <input
                     type="date"
                     required
                     value={newTask.deadline}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, deadline: e.target.value })
+                    onChange={(event) =>
+                      setNewTask({
+                        ...newTask,
+                        deadline: event.target.value,
+                      })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Priority
                   </label>
+
                   <select
                     value={newTask.priority}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, priority: e.target.value })
+                    onChange={(event) =>
+                      setNewTask({
+                        ...newTask,
+                        priority: event.target.value,
+                      })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
-                    <option value="URGENT">🔴 URGENT</option>
-                    <option value="MEDIUM">🟡 MEDIUM</option>
-                    <option value="LOW">🟢 LOW</option>
+                    <option value="URGENT">Urgent</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
                   </select>
                 </div>
               </div>
@@ -363,13 +384,14 @@ const MyProjects = () => {
                 <button
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
-                  className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-xl transition-all"
+                  className="rounded-xl bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold rounded-xl transition-all shadow-sm hover:shadow-md"
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                 >
                   Create Task
                 </button>
@@ -381,60 +403,77 @@ const MyProjects = () => {
 
       {/* Invite Collaborator Modal */}
       {isInviteModalOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsInviteModalOpen(false);
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm dark:bg-slate-950/80"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsInviteModalOpen(false);
+            }
           }}
         >
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200/60 dark:border-slate-800 space-y-5 animate-slide-in">
-            <div className="flex items-center justify-between">
+          <div className="w-full max-w-md space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   Invite Collaborator
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Add a new member to your project team
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Add a new member to the project team.
                 </p>
               </div>
+
               <button
+                type="button"
                 onClick={() => setIsInviteModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                aria-label="Close invitation form"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleInviteCollaborator} className="space-y-4">
+            <form
+              onSubmit={handleInviteCollaborator}
+              className="space-y-4"
+            >
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Full Name <span className="text-rose-500">*</span>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Full name
                 </label>
+
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Jordan Miller"
+                  placeholder="Example: Jordan Miller"
                   value={newInvite.name}
-                  onChange={(e) =>
-                    setNewInvite({ ...newInvite, name: e.target.value })
+                  onChange={(event) =>
+                    setNewInvite({
+                      ...newInvite,
+                      name: event.target.value,
+                    })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Role <span className="text-rose-500">*</span>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Project role
                 </label>
+
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Backend Developer"
+                  placeholder="Example: Cloud Architect"
                   value={newInvite.role}
-                  onChange={(e) =>
-                    setNewInvite({ ...newInvite, role: e.target.value })
+                  onChange={(event) =>
+                    setNewInvite({
+                      ...newInvite,
+                      role: event.target.value,
+                    })
                   }
-                  className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
 
@@ -442,15 +481,16 @@ const MyProjects = () => {
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-xl transition-all"
+                  className="rounded-xl bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold rounded-xl transition-all shadow-sm hover:shadow-md"
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
                 >
-                  Send Invite
+                  Send Invitation
                 </button>
               </div>
             </form>

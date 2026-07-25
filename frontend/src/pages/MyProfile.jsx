@@ -1,560 +1,606 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import {
-  User,
-  Mail,
-  GraduationCap,
-  Clock,
   Award,
-  Star,
-  BookOpen,
-  Save,
-  CheckCircle,
-  AlertCircle,
-  Sparkles,
   Briefcase,
-  MapPin,
-  Loader2,
-  X,
+  Clock3,
+  Heart,
   Plus,
-  PenTool,
+  Save,
+  Star,
+  User,
+  X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function getStoredToken() {
-  return localStorage.getItem("access_token") || sessionStorage.getItem("access_token");
+  return (
+    localStorage.getItem("access_token") ||
+    sessionStorage.getItem("access_token")
+  );
 }
 
-export default function MyProfile() {
-  const [profile, setProfile] = useState({
+function MyProfile() {
+  const navigate = useNavigate();
+
+  const [profileData, setProfileData] = useState({
     full_name: "",
     email: "",
     university: "",
     bio: "",
-    availability: "Flexible",
-    experience_level: "Intermediate",
+    availability: "",
+    experience_level: "",
   });
 
   const [skills, setSkills] = useState([]);
-  const [newSkill, setNewSkill] = useState("");
   const [interests, setInterests] = useState([]);
+
+  const [newSkill, setNewSkill] = useState("");
   const [newInterest, setNewInterest] = useState("");
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const loadProfile = async () => {
       const token = getStoredToken();
+
       if (!token) {
-        setMessage({ type: "error", text: "You are not logged in." });
-        setLoading(false);
+        setIsLoading(false);
+        navigate("/login");
         return;
       }
 
       try {
+        setIsLoading(true);
+        setErrorMessage("");
+
         const response = await axios.get(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        const data = response.data;
-        setProfile({
-          full_name: data.full_name || "",
-          email: data.email || "",
-          university: data.university || "",
-          bio: data.bio || "",
-          availability: data.availability || "Flexible",
-          experience_level: data.experience_level || "Intermediate",
+        setProfileData({
+          full_name: response.data.full_name || "",
+          email: response.data.email || "",
+          university: response.data.university || "",
+          bio: response.data.bio || "",
+          availability: response.data.availability || "",
+          experience_level: response.data.experience_level || "",
         });
-
-        if (data.skills) {
-          setSkills(
-            Array.isArray(data.skills)
-              ? data.skills
-              : data.skills.split(",").map((s) => s.trim()).filter(Boolean)
-          );
-        }
-
-        if (data.interests) {
-          setInterests(
-            Array.isArray(data.interests)
-              ? data.interests
-              : data.interests.split(",").map((i) => i.trim()).filter(Boolean)
-          );
-        }
       } catch (error) {
-        console.error("Error fetching profile:", error);
-        setMessage({ 
-          type: "error", 
-          text: error.response?.data?.detail || "Failed to load profile details." 
-        });
+        console.error("Profile loading error:", error);
+
+        if (error.response?.status === 401) {
+          localStorage.removeItem("access_token");
+          sessionStorage.removeItem("access_token");
+          navigate("/login");
+          return;
+        }
+
+        setErrorMessage(
+          error.response?.data?.detail ||
+            "Unable to load your profile."
+        );
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, []);
+    loadProfile();
+  }, [navigate]);
 
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
-    if (message.text) setMessage({ type: "", text: "" });
+  const handleProfileChange = (event) => {
+    const { name, value } = event.target;
+
+    setProfileData((previousProfile) => ({
+      ...previousProfile,
+      [name]: value,
+    }));
   };
 
   const handleAddSkill = () => {
-    const trimmed = newSkill.trim();
-    if (trimmed && !skills.includes(trimmed)) {
-      setSkills((prev) => [...prev, trimmed]);
-      setNewSkill("");
-    }
-  };
+    const trimmedSkill = newSkill.trim();
 
-  const handleDeleteSkill = (skillToRemove) => {
-    setSkills((prev) => prev.filter((skill) => skill !== skillToRemove));
-  };
-
-  const handleAddInterest = () => {
-    const trimmed = newInterest.trim();
-    if (trimmed && !interests.includes(trimmed)) {
-      setInterests((prev) => [...prev, trimmed]);
-      setNewInterest("");
-    }
-  };
-
-  const handleDeleteInterest = (interestToRemove) => {
-    setInterests((prev) => prev.filter((interest) => interest !== interestToRemove));
-  };
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage({ type: "", text: "" });
-
-    const token = getStoredToken();
-    if (!token) {
-      setMessage({ type: "error", text: "You are not logged in." });
-      setSaving(false);
+    if (!trimmedSkill) {
       return;
     }
 
+    const alreadyExists = skills.some(
+      (skill) =>
+        skill.toLowerCase() === trimmedSkill.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setNewSkill("");
+      return;
+    }
+
+    setSkills((previousSkills) => [
+      ...previousSkills,
+      trimmedSkill,
+    ]);
+
+    setNewSkill("");
+  };
+
+  const handleRemoveSkill = (skillToRemove) => {
+    setSkills((previousSkills) =>
+      previousSkills.filter((skill) => skill !== skillToRemove)
+    );
+  };
+
+  const handleAddInterest = () => {
+    const trimmedInterest = newInterest.trim();
+
+    if (!trimmedInterest) {
+      return;
+    }
+
+    const alreadyExists = interests.some(
+      (interest) =>
+        interest.toLowerCase() === trimmedInterest.toLowerCase()
+    );
+
+    if (alreadyExists) {
+      setNewInterest("");
+      return;
+    }
+
+    setInterests((previousInterests) => [
+      ...previousInterests,
+      trimmedInterest,
+    ]);
+
+    setNewInterest("");
+  };
+
+  const handleRemoveInterest = (interestToRemove) => {
+    setInterests((previousInterests) =>
+      previousInterests.filter(
+        (interest) => interest !== interestToRemove
+      )
+    );
+  };
+
+  const handleSaveChanges = async () => {
+    const token = getStoredToken();
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!(profileData.full_name || "").trim()) {
+      setErrorMessage("Full name is required.");
+      return;
+    }
+
+    const updateData = {
+      full_name: (profileData.full_name || "").trim(),
+      university:
+        (profileData.university || "").trim() || null,
+      bio: (profileData.bio || "").trim() || null,
+      availability: profileData.availability || null,
+      experience_level:
+        profileData.experience_level || null,
+    };
+
     try {
-      await axios.put(
+      setIsSaving(true);
+      setErrorMessage("");
+
+      const response = await axios.put(
         `${API_URL}/users/me`,
+        updateData,
         {
-          ...profile,
-          skills: skills.join(", "),
-          interests: interests.join(", "),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      setMessage({ type: "success", text: "Profile updated successfully! 🎉" });
-      
-      // Auto-dismiss success message after 4 seconds
-      setTimeout(() => {
-        setMessage({ type: "", text: "" });
-      }, 4000);
+      setProfileData((previousProfile) => ({
+        ...previousProfile,
+        ...response.data,
+      }));
+
+      alert("Profile updated successfully.");
     } catch (error) {
-      console.error("Error saving profile:", error);
-      setMessage({
-        type: "error",
-        text: error.response?.data?.detail || "Failed to update profile.",
-      });
+      console.error("Profile update error:", error);
+
+      if (error.response?.status === 401) {
+        localStorage.removeItem("access_token");
+        sessionStorage.removeItem("access_token");
+        navigate("/login");
+        return;
+      }
+
+      const detail = error.response?.data?.detail;
+
+      setErrorMessage(
+        typeof detail === "string"
+          ? detail
+          : "Unable to update your profile."
+      );
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const getInitials = (name) => {
-    if (!name) return "U";
-    return name
+  const getInitials = () => {
+    if (!profileData.full_name) {
+      return "U";
+    }
+
+    return profileData.full_name
       .split(" ")
-      .map((part) => part.charAt(0))
+      .map((namePart) => namePart.charAt(0))
       .join("")
       .slice(0, 2)
       .toUpperCase();
   };
 
-  const getExperienceLevelBadge = (level) => {
-    const colors = {
-      Beginner: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-      Intermediate: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      Advanced: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-      Expert: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-    };
-    return colors[level] || colors.Intermediate;
-  };
-
-  const getAvailabilityBadge = (availability) => {
-    const colors = {
-      "Flexible": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
-      "Part-time (10-15 hrs/wk)": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-      "Full-time (20+ hrs/wk)": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-      "Weekends Only": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-    };
-    return colors[availability] || colors["Flexible"];
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-            Loading profile...
-          </p>
-        </div>
+      <div className="flex min-h-64 items-center justify-center">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Loading profile...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-slate-50/50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
-      <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                My Profile
-              </h1>
-              <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full border border-indigo-100 dark:border-indigo-800/50 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Academic
-              </span>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Manage your academic identity, skills, and project preferences.
-            </p>
-          </div>
+    <div className="mx-auto w-full max-w-[1400px] space-y-6 text-slate-800 dark:text-slate-100">
+      {/* Header */}
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Profile Overview
+          </h1>
 
-          <button
-            type="button"
-            onClick={handleSaveProfile}
-            disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save Profile
-              </>
-            )}
-          </button>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Manage your academic identity and collaboration preferences.
+          </p>
         </div>
 
-        {/* Success/Error Alert */}
-        {message.text && (
-          <div
-            className={`flex items-start gap-3 rounded-2xl p-4 text-sm font-semibold animate-fade-in ${
-              message.type === "success"
-                ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"
-                : "bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50"
-            }`}
-          >
-            {message.type === "success" ? (
-              <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-            )}
-            <span>{message.text}</span>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={handleSaveChanges}
+          disabled={isSaving}
+          className="flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+        >
+          <Save className="h-4 w-4" />
+          {isSaving ? "Saving..." : "Save Changes"}
+        </button>
+      </section>
 
-        <form onSubmit={handleSaveProfile} className="space-y-6">
-          
-          {/* Profile Header Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-indigo-500/30">
-                {getInitials(profile.full_name)}
+      {errorMessage && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        {/* Main profile column */}
+        <div className="space-y-6 lg:col-span-2">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <div className="flex flex-col gap-6 md:flex-row">
+              <div className="mx-auto flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-3xl font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 md:mx-0">
+                {getInitials()}
               </div>
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-                  {profile.full_name || "Your Name"}
-                </h2>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${getExperienceLevelBadge(profile.experience_level)}`}>
-                    {profile.experience_level}
-                  </span>
-                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${getAvailabilityBadge(profile.availability)}`}>
-                    {profile.availability}
-                  </span>
+
+              <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="full_name"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+                  >
+                    Full Name
+                  </label>
+
+                  <input
+                    id="full_name"
+                    type="text"
+                    name="full_name"
+                    value={profileData.full_name}
+                    onChange={handleProfileChange}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-indigo-950"
+                  />
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
-                  {profile.email}
-                </p>
-              </div>
-            </div>
-          </div>
 
-          {/* General Information Section */}
-          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
-                <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Personal Information
-              </h2>
-            </div>
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+                  >
+                    Email
+                  </label>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <User className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={profile.full_name}
-                  onChange={handleProfileChange}
-                  placeholder="John Doe"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
-              </div>
+                  <input
+                    id="email"
+                    type="email"
+                    value={profileData.email}
+                    disabled
+                    className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-500"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={profile.email}
-                  onChange={handleProfileChange}
-                  disabled
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/30 px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed outline-none"
-                />
-              </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="university"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+                  >
+                    University
+                  </label>
 
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <GraduationCap className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  University / Institution
-                </label>
-                <input
-                  type="text"
-                  name="university"
-                  value={profile.university}
-                  onChange={handleProfileChange}
-                  placeholder="e.g. Stanford University"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
-              </div>
+                  <input
+                    id="university"
+                    type="text"
+                    name="university"
+                    value={profileData.university}
+                    onChange={handleProfileChange}
+                    placeholder="Enter your university"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-indigo-950"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  Availability
-                </label>
-                <select
-                  name="availability"
-                  value={profile.availability}
-                  onChange={handleProfileChange}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
-                >
-                  <option value="Flexible">🔄 Flexible</option>
-                  <option value="Part-time (10-15 hrs/wk)">⏳ Part-time (10-15 hrs/wk)</option>
-                  <option value="Full-time (20+ hrs/wk)">💪 Full-time (20+ hrs/wk)</option>
-                  <option value="Weekends Only">📅 Weekends Only</option>
-                </select>
-              </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="bio"
+                    className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+                  >
+                    Bio
+                  </label>
 
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <Award className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  Experience Level
-                </label>
-                <select
-                  name="experience_level"
-                  value={profile.experience_level}
-                  onChange={handleProfileChange}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all text-slate-700 dark:text-slate-200"
-                >
-                  <option value="Beginner">🌱 Beginner</option>
-                  <option value="Intermediate">📈 Intermediate</option>
-                  <option value="Advanced">🚀 Advanced</option>
-                  <option value="Expert">🏆 Expert</option>
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <PenTool className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" /> 
-                  Bio / Background
-                </label>
-                <textarea
-                  name="bio"
-                  rows={3}
-                  value={profile.bio}
-                  onChange={handleProfileChange}
-                  placeholder="Describe your background, skills, and goals..."
-                  className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    rows="4"
+                    value={profileData.bio}
+                    onChange={handleProfileChange}
+                    placeholder="Describe your background and goals"
+                    className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-indigo-950"
+                  />
+                </div>
               </div>
             </div>
           </section>
 
-          {/* Skills Section */}
-          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
-                <Star className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+          {/* Skills and interests */}
+          <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                <Star className="h-4 w-4" />
+                Skills
               </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Skills & Expertise
-              </h2>
-              <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500">
-                {skills.length} skills
-              </span>
-            </div>
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={newSkill}
-                  onChange={(event) => setNewSkill(event.target.value)}
+                  onChange={(event) =>
+                    setNewSkill(event.target.value)
+                  }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
                       handleAddSkill();
                     }
                   }}
-                  placeholder="Add a skill (e.g. React, Python)"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  placeholder="Add a skill"
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 />
-              </div>
-              <button
-                type="button"
-                onClick={handleAddSkill}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
-              >
-                <Plus className="h-4 w-4" />
-                Add Skill
-              </button>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill, index) => (
-                <span
-                  key={index}
-                  onClick={() => handleDeleteSkill(skill)}
-                  className="group cursor-pointer rounded-full bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-all border border-indigo-100 dark:border-indigo-800/50 hover:border-rose-200 dark:hover:border-rose-800/50 flex items-center gap-1.5"
-                  title="Click to remove"
+                <button
+                  type="button"
+                  onClick={handleAddSkill}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
                 >
-                  {skill}
-                  <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                </span>
-              ))}
-              {skills.length === 0 && (
-                <p className="text-sm italic text-slate-400 dark:text-slate-500">
-                  No skills added yet. Add your first skill above!
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* Research Interests Section */}
-          <section className="space-y-6 rounded-3xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg">
-                <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
               </div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Research & Academic Interests
-              </h2>
-              <span className="ml-auto text-xs font-medium text-slate-400 dark:text-slate-500">
-                {interests.length} interests
-              </span>
+
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
+                  >
+                    {skill}
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSkill(skill)}
+                      aria-label={`Remove ${skill}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {skills.length === 0 && (
+                  <p className="text-sm text-slate-400 dark:text-slate-500">
+                    No skills added yet.
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                <Heart className="h-4 w-4" />
+                Interests
+              </div>
+
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
                   value={newInterest}
-                  onChange={(event) => setNewInterest(event.target.value)}
+                  onChange={(event) =>
+                    setNewInterest(event.target.value)
+                  }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
                       handleAddInterest();
                     }
                   }}
-                  placeholder="Add an interest (e.g. Machine Learning, NLP)"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:focus:bg-slate-800 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  placeholder="Add an interest"
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 />
+
+                <button
+                  type="button"
+                  onClick={handleAddInterest}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleAddInterest}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-5 py-2.5 text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
-              >
-                <Plus className="h-4 w-4" />
-                Add Interest
-              </button>
+
+              <div className="flex flex-wrap gap-2">
+                {interests.map((interest) => (
+                  <span
+                    key={interest}
+                    className="flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white dark:bg-indigo-500"
+                  >
+                    {interest}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemoveInterest(interest)
+                      }
+                      aria-label={`Remove ${interest}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {interests.length === 0 && (
+                  <p className="text-sm text-slate-400 dark:text-slate-500">
+                    No interests added yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          <section className="rounded-2xl bg-indigo-700 p-6 text-white shadow-md dark:bg-indigo-600">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+                Reputation Score
+              </p>
+
+              <Award className="h-5 w-5" />
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {interests.map((interest, index) => (
-                <span
-                  key={index}
-                  onClick={() => handleDeleteInterest(interest)}
-                  className="group cursor-pointer rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-3.5 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-all border border-emerald-100 dark:border-emerald-800/50 hover:border-rose-200 dark:hover:border-rose-800/50 flex items-center gap-1.5"
-                  title="Click to remove"
+            <p className="mt-4 text-5xl font-black">0</p>
+
+            <p className="mt-2 text-xs text-indigo-100">
+              Reputation information will appear after completing team
+              projects.
+            </p>
+          </section>
+
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+              <Briefcase className="h-4 w-4" />
+              Collaboration Preferences
+            </div>
+
+            <div>
+              <label
+                htmlFor="experience_level"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+              >
+                Experience Level
+              </label>
+
+              <select
+                id="experience_level"
+                name="experience_level"
+                value={profileData.experience_level}
+                onChange={handleProfileChange}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                <option value="">Select experience level</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="availability"
+                className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+              >
+                Availability
+              </label>
+
+              <div className="relative">
+                <Clock3 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+
+                <select
+                  id="availability"
+                  name="availability"
+                  value={profileData.availability}
+                  onChange={handleProfileChange}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
-                  {interest}
-                  <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                </span>
-              ))}
-              {interests.length === 0 && (
-                <p className="text-sm italic text-slate-400 dark:text-slate-500">
-                  No interests added yet. Add your first interest above!
-                </p>
-              )}
+                  <option value="">Select availability</option>
+                  <option value="1-5 hours/week">
+                    1–5 hours per week
+                  </option>
+                  <option value="6-10 hours/week">
+                    6–10 hours per week
+                  </option>
+                  <option value="11-20 hours/week">
+                    11–20 hours per week
+                  </option>
+                  <option value="20+ hours/week">
+                    More than 20 hours per week
+                  </option>
+                </select>
+              </div>
             </div>
           </section>
 
-          {/* Save Button Footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Your profile information is visible to potential collaborators
-            </p>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Profile
-                </>
-              )}
-            </button>
-          </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-indigo-100 p-3 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                <User className="h-5 w-5" />
+              </div>
 
-        </form>
-      </main>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-200">
+                  {profileData.full_name || "Current User"}
+                </p>
+
+                <p className="truncate text-xs text-slate-400 dark:text-slate-500">
+                  {profileData.email}
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
+
+export default MyProfile;
