@@ -2,6 +2,10 @@ import {
   LayoutDashboard,
   User,
   Users,
+  Rocket,
+  Award,
+  Settings,
+  Bell,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -27,14 +31,34 @@ const navigationItems = [
     path: "/ai-matching",
     icon: Users,
   },
+  {
+    label: "My Projects",
+    path: "/my-projects",
+    icon: Rocket,
+  },
+  {
+    label: "Reputation",
+    path: "/reputation",
+    icon: Award,
+  },
+  {
+    label: "Notifications",
+    path: "/notifications",
+    icon: Bell,
+  },
+  {
+    label: "Settings",
+    path: "/settings",
+    icon: Settings,
+  },
 ];
 
 function Sidebar({ isOpen, onClose }) {
   const linkClassName = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
       isActive
-        ? "bg-indigo-50 text-indigo-700"
-        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
     }`;
 
   return (
@@ -50,7 +74,7 @@ function Sidebar({ isOpen, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white p-6 transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white p-6 transition-transform duration-300 dark:border-slate-800 dark:bg-slate-900 md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -58,7 +82,7 @@ function Sidebar({ isOpen, onClose }) {
           {/* Logo */}
           <div className="mb-8 flex items-start justify-between">
             <div>
-              <h1 className="text-xl font-bold text-slate-800">
+              <h1 className="text-xl font-bold text-slate-800 dark:text-white">
                 CollabIQ
               </h1>
 

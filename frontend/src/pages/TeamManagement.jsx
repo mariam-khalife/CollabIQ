@@ -7,7 +7,6 @@ import {
   Trash2,
   UserMinus,
   UserPlus,
-  Users,
   X,
 } from "lucide-react";
 
@@ -82,8 +81,6 @@ export default function TeamManagement() {
     setMessage("");
 
     setTimeout(() => {
-      // Temporary frontend simulation.
-      // Later replace this with the real readiness API.
       setReadiness(85);
       setSkillCoverage(92);
       setIsAnalyzing(false);
@@ -300,45 +297,48 @@ export default function TeamManagement() {
       .toUpperCase();
   };
 
+  const inputClassName =
+    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-indigo-950";
+
   return (
-    <div className="mx-auto w-full max-w-[1250px] space-y-5 p-1 text-slate-800 antialiased">
+    <div className="mx-auto w-full max-w-[1250px] space-y-5 p-1 text-slate-800 antialiased dark:text-slate-100">
       <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Team Management
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Manage your team members, roles, invitations, and readiness.
           </p>
         </div>
 
-        <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-700">
+        <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
           Active Team
         </span>
       </section>
 
       {message && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400">
           {message}
         </div>
       )}
 
       {errorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
           {errorMessage}
         </div>
       )}
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
         <div className="space-y-4">
-          <section className="flex flex-col items-center rounded-xl border border-slate-100 bg-white p-4 text-center shadow-sm">
+          <section className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex w-full items-center justify-between">
-              <h2 className="text-xs font-bold tracking-tight text-slate-900">
+              <h2 className="text-xs font-bold tracking-tight text-slate-900 dark:text-white">
                 Team Readiness
               </h2>
 
-              <span className="rounded-md bg-indigo-50 p-1.5 text-indigo-600">
+              <span className="rounded-md bg-indigo-50 p-1.5 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
                 <BarChart3 className="h-4 w-4" />
               </span>
             </div>
@@ -349,7 +349,7 @@ export default function TeamManagement() {
                 viewBox="0 0 36 36"
               >
                 <path
-                  className="text-slate-100"
+                  className="text-slate-100 dark:text-slate-800"
                   strokeWidth="3"
                   stroke="currentColor"
                   fill="none"
@@ -357,7 +357,7 @@ export default function TeamManagement() {
                 />
 
                 <path
-                  className="text-indigo-600 transition-all duration-500"
+                  className="text-indigo-600 transition-all duration-500 dark:text-indigo-500"
                   strokeDasharray={`${readiness}, 100`}
                   strokeWidth="3"
                   strokeLinecap="round"
@@ -368,11 +368,11 @@ export default function TeamManagement() {
               </svg>
 
               <div className="absolute text-center">
-                <span className="block text-xl font-black tracking-tight">
+                <span className="block text-xl font-black tracking-tight text-slate-900 dark:text-white">
                   {readiness}%
                 </span>
 
-                <span className="-mt-1 block text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="-mt-1 block text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Ready
                 </span>
               </div>
@@ -380,14 +380,14 @@ export default function TeamManagement() {
 
             <div className="mt-4 w-full space-y-3 text-left">
               <div>
-                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500">
+                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
                   <span>Skill Coverage</span>
-                  <span className="text-indigo-600">
+                  <span className="text-indigo-600 dark:text-indigo-400">
                     {skillCoverage}%
                   </span>
                 </div>
 
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
+                <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                   <div
                     className="h-1.5 rounded-full bg-indigo-600 transition-all duration-500"
                     style={{
@@ -398,14 +398,14 @@ export default function TeamManagement() {
               </div>
 
               <div>
-                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500">
+                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
                   <span>Availability</span>
-                  <span className="text-indigo-600">
+                  <span className="text-indigo-600 dark:text-indigo-400">
                     {availability}%
                   </span>
                 </div>
 
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
+                <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                   <div
                     className="h-1.5 rounded-full bg-indigo-600"
                     style={{
@@ -420,7 +420,7 @@ export default function TeamManagement() {
               type="button"
               onClick={handleRefreshAnalysis}
               disabled={isAnalyzing}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400 dark:hover:bg-indigo-500"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${
@@ -434,70 +434,65 @@ export default function TeamManagement() {
             </button>
           </section>
 
-          <section className="space-y-2.5 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          <section className="space-y-2.5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Team Leader Actions
             </span>
 
-            <button
-              type="button"
-              onClick={() => openAction("invite")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-indigo-600" />
+            {[
+              {
+                action: "invite",
+                label: "Send New Invitation",
+                icon: UserPlus,
+                iconClass:
+                  "text-indigo-600 dark:text-indigo-400",
+              },
+              {
+                action: "role",
+                label: "Assign Roles",
+                icon: Briefcase,
+                iconClass:
+                  "text-slate-500 dark:text-slate-400",
+              },
+              {
+                action: "remove",
+                label: "Remove Member",
+                icon: UserMinus,
+                iconClass:
+                  "text-rose-500 dark:text-rose-400",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
 
-                <span className="text-xs font-bold text-slate-700">
-                  Send New Invitation
-                </span>
-              </div>
+              return (
+                <button
+                  key={item.action}
+                  type="button"
+                  onClick={() => openAction(item.action)}
+                  className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      className={`h-4 w-4 ${item.iconClass}`}
+                    />
 
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {item.label}
+                    </span>
+                  </div>
 
-            <button
-              type="button"
-              onClick={() => openAction("role")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-slate-500" />
-
-                <span className="text-xs font-bold text-slate-700">
-                  Assign Roles
-                </span>
-              </div>
-
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openAction("remove")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <UserMinus className="h-4 w-4 text-rose-500" />
-
-                <span className="text-xs font-bold text-slate-700">
-                  Remove Member
-                </span>
-              </div>
-
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
+                  <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5 dark:text-slate-500">
+                    ➔
+                  </span>
+                </button>
+              );
+            })}
           </section>
 
           {activeAction && (
-            <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                   {activeAction === "invite" &&
                     "Send New Invitation"}
 
@@ -511,7 +506,7 @@ export default function TeamManagement() {
                 <button
                   type="button"
                   onClick={closeAction}
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   aria-label="Close action form"
                 >
                   <X className="h-4 w-4" />
@@ -524,7 +519,7 @@ export default function TeamManagement() {
                   className="space-y-3"
                 >
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Full Name
                     </label>
 
@@ -534,12 +529,12 @@ export default function TeamManagement() {
                       value={invitationForm.name}
                       onChange={handleInvitationChange}
                       placeholder="Enter the user name"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={inputClassName}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Email
                     </label>
 
@@ -549,12 +544,12 @@ export default function TeamManagement() {
                       value={invitationForm.email}
                       onChange={handleInvitationChange}
                       placeholder="Enter the user email"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={inputClassName}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Proposed Role
                     </label>
 
@@ -564,13 +559,13 @@ export default function TeamManagement() {
                       value={invitationForm.role}
                       onChange={handleInvitationChange}
                       placeholder="Example: Frontend Developer"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className={inputClassName}
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700 dark:hover:bg-indigo-500"
                   >
                     <Send className="h-3.5 w-3.5" />
                     Send Invitation
@@ -584,7 +579,7 @@ export default function TeamManagement() {
                   className="space-y-3"
                 >
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Team Member
                     </label>
 
@@ -593,7 +588,7 @@ export default function TeamManagement() {
                       onChange={(event) =>
                         setSelectedMemberId(event.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                      className={inputClassName}
                     >
                       <option value="">
                         Select a member
@@ -611,7 +606,7 @@ export default function TeamManagement() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       New Role
                     </label>
 
@@ -622,13 +617,13 @@ export default function TeamManagement() {
                         setNewRole(event.target.value)
                       }
                       placeholder="Enter the new role"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                      className={inputClassName}
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700 dark:hover:bg-indigo-500"
                   >
                     <Briefcase className="h-3.5 w-3.5" />
                     Save Role
@@ -639,7 +634,7 @@ export default function TeamManagement() {
               {activeAction === "remove" && (
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Team Member
                     </label>
 
@@ -648,7 +643,7 @@ export default function TeamManagement() {
                       onChange={(event) =>
                         setSelectedMemberId(event.target.value)
                       }
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-rose-500"
+                      className={inputClassName}
                     >
                       <option value="">
                         Select a member
@@ -668,7 +663,7 @@ export default function TeamManagement() {
                   <button
                     type="button"
                     onClick={handleRemoveMember}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-600 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-600 py-2 text-xs font-bold text-white transition hover:bg-rose-700 dark:hover:bg-rose-500"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Remove Member
@@ -680,20 +675,20 @@ export default function TeamManagement() {
         </div>
 
         <div className="space-y-4 lg:col-span-2">
-          <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-            <div className="flex flex-col justify-between gap-3 border-b border-slate-50 bg-slate-50/30 p-4 sm:flex-row sm:items-center">
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex flex-col justify-between gap-3 border-b border-slate-100 bg-slate-50/30 p-4 dark:border-slate-800 dark:bg-slate-800/40 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-sm font-extrabold tracking-tight text-slate-900">
+                <h2 className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
                   Current Team Members
                 </h2>
 
-                <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">
                   {members.length} contributor
                   {members.length === 1 ? "" : "s"} found
                 </p>
               </div>
 
-              <span className="w-fit rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-700">
+              <span className="w-fit rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
                 Active Project
               </span>
             </div>
@@ -701,53 +696,46 @@ export default function TeamManagement() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-slate-50 bg-slate-50/10 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    <th className="p-3 pl-4">
-                      Member
-                    </th>
-
+                  <tr className="border-b border-slate-100 bg-slate-50/10 text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:bg-slate-800/20 dark:text-slate-500">
+                    <th className="p-3 pl-4">Member</th>
                     <th className="p-3">Role</th>
-
-                    <th className="p-3">
-                      Specialization
-                    </th>
-
+                    <th className="p-3">Specialization</th>
                     <th className="p-3 pr-4 text-center">
                       Status
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-50 text-xs">
+                <tbody className="divide-y divide-slate-100 text-xs dark:divide-slate-800">
                   {members.map((member) => (
                     <tr
                       key={member.id}
-                      className="transition hover:bg-slate-50/40"
+                      className="transition hover:bg-slate-50/40 dark:hover:bg-slate-800/40"
                     >
                       <td className="p-3 pl-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 font-bold uppercase text-slate-700">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             {getInitials(member.name)}
                           </div>
 
                           <div className="min-w-0">
-                            <p className="truncate font-bold leading-tight text-slate-900">
+                            <p className="truncate font-bold leading-tight text-slate-900 dark:text-white">
                               {member.name}
                             </p>
 
-                            <p className="mt-0.5 truncate text-[10px] font-normal text-slate-400">
+                            <p className="mt-0.5 truncate text-[10px] font-normal text-slate-400 dark:text-slate-500">
                               {member.email}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="p-3 font-medium text-slate-600">
+                      <td className="p-3 font-medium text-slate-600 dark:text-slate-300">
                         {member.role}
                       </td>
 
                       <td className="p-3">
-                        <span className="rounded bg-indigo-50/60 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+                        <span className="rounded bg-indigo-50/60 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
                           {member.specialization}
                         </span>
                       </td>
@@ -757,7 +745,7 @@ export default function TeamManagement() {
                           className={`inline-block h-2 w-2 rounded-full ${
                             member.status === "active"
                               ? "bg-emerald-500"
-                              : "bg-slate-300"
+                              : "bg-slate-300 dark:bg-slate-600"
                           }`}
                         />
                       </td>
@@ -768,7 +756,7 @@ export default function TeamManagement() {
                     <tr>
                       <td
                         colSpan="4"
-                        className="px-4 py-8 text-center text-xs text-slate-400"
+                        className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500"
                       >
                         No team members found.
                       </td>
@@ -779,26 +767,26 @@ export default function TeamManagement() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-extrabold tracking-tight text-slate-900">
+                <h2 className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
                   Pending Invitations
                 </h2>
 
-                <p className="mt-0.5 text-[10px] text-slate-400">
+                <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
                   Invitations waiting for a response
                 </p>
               </div>
 
-              <span className="text-[11px] font-medium text-slate-400">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
                 {invitations.length} outstanding
               </span>
             </div>
 
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {invitations.length === 0 ? (
-                <p className="py-5 text-center text-xs text-slate-400">
+                <p className="py-5 text-center text-xs text-slate-400 dark:text-slate-500">
                   No pending invitations.
                 </p>
               ) : (
@@ -808,39 +796,36 @@ export default function TeamManagement() {
                     className="flex flex-col justify-between gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-500">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {getInitials(invitation.name)}
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-slate-900">
+                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                           {invitation.name}
                         </p>
 
-                        <p className="truncate text-[10px] text-slate-400">
+                        <p className="truncate text-[10px] text-slate-400 dark:text-slate-500">
                           {invitation.email}
                         </p>
 
-                        <p className="mt-0.5 text-[10px] text-slate-400">
-                          {invitation.role} •{" "}
-                          {invitation.time}
+                        <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                          {invitation.role} • {invitation.time}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2">
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         {invitation.status}
                       </span>
 
                       <button
                         type="button"
                         onClick={() =>
-                          handleRemindInvite(
-                            invitation.id
-                          )
+                          handleRemindInvite(invitation.id)
                         }
-                        className="rounded p-1.5 text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800"
+                        className="rounded p-1.5 text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
                         title="Send reminder"
                       >
                         <Send className="h-4 w-4" />
@@ -849,11 +834,9 @@ export default function TeamManagement() {
                       <button
                         type="button"
                         onClick={() =>
-                          handleCancelInvite(
-                            invitation.id
-                          )
+                          handleCancelInvite(invitation.id)
                         }
-                        className="rounded p-1.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
+                        className="rounded p-1.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
                         title="Cancel invitation"
                       >
                         <Trash2 className="h-4 w-4" />

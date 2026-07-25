@@ -9,6 +9,9 @@ import MyProfile from "./pages/MyProfile";
 import AiMatching from "./pages/AiMatching";
 import TeamManagement from "./pages/TeamManagement";
 import Notifications from "./pages/Notifications";
+import MyProjects from "./pages/MyProjects";
+import Reputation from "./pages/Reputation";
+import Settings from "./pages/Settings";
 
 import Layout from "./components/Layout";
 
@@ -63,13 +66,41 @@ function App() {
             </Layout>
           }
         />
+
         <Route
-        path="/notifications"
-        element={
-          <Layout>
-            <Notifications />
-          </Layout>
-        }
+          path="/notifications"
+          element={
+            <Layout>
+              <Notifications />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/my-projects"
+          element={
+            <Layout>
+              <MyProjects />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/reputation"
+          element={
+            <Layout>
+              <Reputation />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <Layout>
+              <Settings />
+            </Layout>
+          }
         />
 
         {/* Redirect unknown routes */}
