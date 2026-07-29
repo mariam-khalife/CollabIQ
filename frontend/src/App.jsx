@@ -10,6 +10,7 @@ import AiMatching from "./pages/AiMatching";
 import TeamManagement from "./pages/TeamManagement";
 import Notifications from "./pages/Notifications";
 import MyProjects from "./pages/MyProjects";
+import Roadmap from "./pages/Roadmap"; // Added Roadmap page import
 import Reputation from "./pages/Reputation";
 import Settings from "./pages/Settings";
 
@@ -81,6 +82,16 @@ function App() {
           element={
             <Layout>
               <MyProjects />
+            </Layout>
+          }
+        />
+
+        {/* New Roadmap Management Route */}
+        <Route
+          path="/roadmap"
+          element={
+            <Layout>
+              <Roadmap />
             </Layout>
           }
         />

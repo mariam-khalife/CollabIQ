@@ -3,6 +3,7 @@ import {
   User,
   Users,
   Rocket,
+  Map,
   Award,
   Settings,
   Bell,
@@ -37,14 +38,19 @@ const navigationItems = [
     icon: Rocket,
   },
   {
-    label: "Reputation",
-    path: "/reputation",
-    icon: Award,
+    label: "Roadmap",
+    path: "/roadmap",
+    icon: Map,
   },
   {
     label: "Notifications",
     path: "/notifications",
     icon: Bell,
+  },
+  {
+    label: "Reputation",
+    path: "/reputation",
+    icon: Award,
   },
   {
     label: "Settings",
@@ -125,14 +131,14 @@ function Sidebar({ isOpen, onClose }) {
             <NavLink
               to="/profile"
               onClick={onClose}
-              className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100"
+              className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
                 U
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-800">
+                <p className="truncate text-sm font-semibold text-slate-800 dark:text-white">
                   Current User
                 </p>
 
