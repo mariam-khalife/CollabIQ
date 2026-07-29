@@ -1,0 +1,159 @@
+{
+  "candidates": [
+    {
+      "user_id": "101",
+      "name": "John Smith",
+      "role": "Backend Developer",
+      "skills": ["Python", "FastAPI", "PostgreSQL", "Docker"],
+      "interests": ["Backend Architecture", "APIs"],
+      "experience_level": 4,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "102",
+      "name": "Maria Chen",
+      "role": "Backend Developer",
+      "skills": ["Python", "Django", "MySQL"],
+      "interests": ["Backend Architecture"],
+      "experience_level": 2,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "103",
+      "name": "Priya Patel",
+      "role": "Frontend Developer",
+      "skills": ["React", "JavaScript", "Tailwind CSS"],
+      "interests": ["UI Development", "Design Systems"],
+      "experience_level": 3,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "104",
+      "name": "Tom Nguyen",
+      "role": "AI Engineer",
+      "skills": ["Python", "Machine Learning", "TensorFlow"],
+      "interests": ["Artificial Intelligence", "Data Science"],
+      "experience_level": 4,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "105",
+      "name": "Sara Okafor",
+      "role": "AI Engineer",
+      "skills": ["Python", "Machine Learning"],
+      "interests": ["Cybersecurity"],
+      "experience_level": 3,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "106",
+      "name": "Liam Walsh",
+      "role": "UI/UX Designer",
+      "skills": ["Figma", "User Research", "Prototyping"],
+      "interests": ["UI/UX Design", "Accessibility"],
+      "experience_level": 3,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "107",
+      "name": "Aisha Rahman",
+      "role": "Database Engineer",
+      "skills": ["PostgreSQL", "MongoDB", "Data Modeling"],
+      "interests": ["Database Architecture"],
+      "experience_level": 4,
+      "is_available": false,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "108",
+      "name": "Diego Martinez",
+      "role": "Backend Developer",
+      "skills": ["Python", "FastAPI", "PostgreSQL", "Redis"],
+      "interests": ["Backend Architecture", "APIs"],
+      "experience_level": 5,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "109",
+      "name": "Emma Kowalski",
+      "role": "Frontend Developer",
+      "skills": ["React", "JavaScript"],
+      "interests": ["UI Development"],
+      "experience_level": 2,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": true,
+      "has_pending_invitation": false
+    },
+    {
+      "user_id": "110",
+      "name": "Noah Kim",
+      "role": "Backend Developer",
+      "skills": ["Python", "FastAPI"],
+      "interests": ["Backend Architecture"],
+      "experience_level": 3,
+      "is_available": true,
+      "is_team_leader": false,
+      "is_existing_member": false,
+      "has_pending_invitation": true
+    },
+    {
+      "user_id": "111",
+      "name": "Grace Adeyemi",
+      "role": "Team Leader",
+      "skills": ["Python", "Project Management"],
+      "interests": ["Backend Architecture"],
+      "experience_level": 5,
+      "is_available": true,
+      "is_team_leader": true,
+      "is_existing_member": false,
+      "has_pending_invitation": false
+    }
+  ],
+  "sample_project_requirements": [
+    {
+      "scenario": "Scenario 1 - Missing Backend Developer",
+      "missing_role": "Backend Developer",
+      "required_skills": ["Python", "FastAPI", "PostgreSQL"],
+      "required_interests": ["Backend Architecture"],
+      "min_experience_level": 3
+    },
+    {
+      "scenario": "Scenario 2 - Missing AI Engineer",
+      "missing_role": "AI Engineer",
+      "required_skills": ["Python", "Machine Learning"],
+      "required_interests": ["Artificial Intelligence"],
+      "min_experience_level": 3
+    },
+    {
+      "scenario": "Scenario 3 - Missing UI/UX Designer",
+      "missing_role": "UI/UX Designer",
+      "required_skills": ["Figma", "User Research"],
+      "required_interests": ["UI/UX Design"],
+      "min_experience_level": 2
+    }
+  ]
+}
