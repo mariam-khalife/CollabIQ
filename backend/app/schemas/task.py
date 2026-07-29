@@ -10,6 +10,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str | None = None
     deadline: date | None = None
+    priority: str = "medium"
 
 
 class TaskUpdate(BaseModel):
@@ -17,6 +18,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     deadline: date | None = None
+    priority: str | None = None
     status: str | None = None
 
 
@@ -31,7 +33,10 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None
     deadline: date | None
+    priority: str
     status: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True
+    }

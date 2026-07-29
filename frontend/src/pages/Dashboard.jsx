@@ -1,180 +1,104 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertCircle,
   Award,
   Calendar,
   CheckCircle2,
   Cpu,
-  FileText,
-  MessageSquare,
+  History,
+  Loader2,
   Plus,
+  RefreshCw,
   Search,
+  Users,
 } from "lucide-react";
 
 import "../styles/dashboard.css";
 
-const API_URL = "http://127.0.0.1:8000";
+import {
+  getCurrentUser,
+  getUserTeams,
+} from "../services/userService";
 
-const sampleTeamMembers = [
-  {
-    id: 1,
-    name: "Team Member",
-    role: "Data Scientist",
-  },
-  {
-    id: 2,
-    name: "Team Member",
-    role: "UI/UX Designer",
-  },
-  {
-    id: 3,
-    name: "Team Member",
-    role: "AI Engineer",
-  },
-];
+import {
+  getTeamMembers,
+  getTeamReadiness,
+} from "../services/teamService";
 
-const sampleDeadlines = [
-  {
-    id: 1,
-    month: "Jul",
-    day: "24",
-    title: "Dataset Submission",
-    location: "Project Workspace",
-    status: "Upcoming",
-  },
-  {
-    id: 2,
-    month: "Jul",
-    day: "28",
-    title: "UI Review",
-    location: "Online Meeting",
-    status: "Upcoming",
-  },
-  {
-    id: 3,
-    month: "Jul",
-    day: "30",
-    title: "Final Project Review",
-    location: "Submission Portal",
-    status: "Upcoming",
-  },
-];
+import { getTeamProject } from "../services/projectService";
 
-const sampleActivities = [
-  {
-    id: 1,
-    user: "Team member",
-    action: "updated",
-    target: "a project task",
-    time: "Recently",
-    type: "file",
-  },
-  {
-    id: 2,
-    user: "System",
-    action: "generated",
-    target: "new teammate recommendations",
-    time: "Recently",
-    type: "system",
-  },
-  {
-    id: 3,
-    user: "Team member",
-    action: "updated",
-    target: "the project roadmap",
-    time: "Recently",
-    type: "chat",
-  },
-];
+import {
+  getProjectRoadmap,
+  getRoadmapProgress,
+} from "../services/roadmapService";
 
-function getStoredToken() {
-  return (
-    localStorage.getItem("access_token") ||
-    sessionStorage.getItem("access_token")
-  );
-}
+import {
+  getProjectTasks,
+  getUserTasks,
+} from "../services/taskService";
+
+import { getMyReputation } from "../services/reputationService";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [currentUser, setCurrentUser] = useState({
-    full_name: "Student",
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [activeTeam, setActiveTeam] = useState(null);
+
+  const [project, setProject] = useState(null);
+  const [roadmap, setRoadmap] = useState(null);
+  const [roadmapProgress, setRoadmapProgress] =
+    useState(null);
+
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [readiness, setReadiness] = useState(null);
+
+  const [projectTasks, setProjectTasks] = useState([]);
+  const [userTasks, setUserTasks] = useState([]);
+
+  const [reputation, setReputation] = useState(null);
 
   const [search, setSearch] = useState("");
-  const [progress] = useState(78);
-  const [readiness] = useState(92);
-  const [reputation] = useState(842);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
 
-  const [teamMembers] = useState(sampleTeamMembers);
-  const [deadlines, setDeadlines] = useState(sampleDeadlines);
-  const [activities, setActivities] = useState(sampleActivities);
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  useEffect(() => {
-    const loadCurrentUser = async () => {
-      const token = getStoredToken();
+  const isLeader =
+    Boolean(currentUser) &&
+    Boolean(activeTeam) &&
+    currentUser.id === activeTeam.leader_id;
 
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const response = await axios.get(`${API_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setCurrentUser(response.data);
-      } catch (error) {
-        console.error("Failed to load current user:", error);
-
-        if (error.response?.status === 401) {
-          localStorage.removeItem("access_token");
-          sessionStorage.removeItem("access_token");
-          navigate("/login");
-        }
-      }
-    };
-
-    loadCurrentUser();
-  }, [navigate]);
-
-  const filteredTeamMembers = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    if (!normalizedSearch) {
-      return teamMembers;
+  const formatDate = (dateValue) => {
+    if (!dateValue) {
+      return null;
     }
 
-    return teamMembers.filter((member) => {
-      return (
-        member.name.toLowerCase().includes(normalizedSearch) ||
-        member.role.toLowerCase().includes(normalizedSearch)
-      );
-    });
-  }, [search, teamMembers]);
+    const date = new Date(dateValue);
 
-  const handleCompleteDeadline = (deadlineId, deadlineTitle) => {
-    setDeadlines((previousDeadlines) =>
-      previousDeadlines.filter(
-        (deadline) => deadline.id !== deadlineId
-      )
-    );
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
 
-    setActivities((previousActivities) => [
-      {
-        id: Date.now(),
-        user: currentUser.full_name || "Current user",
-        action: "completed",
-        target: deadlineTitle,
-        time: "Just now",
-        type: "system",
-      },
-      ...previousActivities,
-    ]);
+    return {
+      month: date.toLocaleDateString("en-US", {
+        month: "short",
+      }),
+
+      day: date.toLocaleDateString("en-US", {
+        day: "2-digit",
+      }),
+
+      full: date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      }),
+    };
   };
 
   const getInitials = (name) => {
@@ -184,16 +108,298 @@ export default function Dashboard() {
 
     return name
       .split(" ")
-      .map((part) => part.charAt(0))
-      .join("")
+      .filter(Boolean)
       .slice(0, 2)
-      .toUpperCase();
+      .map((part) => part[0]?.toUpperCase())
+      .join("");
   };
+
+  const clearTeamData = () => {
+    setProject(null);
+    setRoadmap(null);
+    setRoadmapProgress(null);
+    setProjectTasks([]);
+  };
+
+  const loadTeamData = async (team) => {
+    const [membersData, readinessData] =
+      await Promise.all([
+        getTeamMembers(team.id),
+        getTeamReadiness(team.id),
+      ]);
+
+    setTeamMembers(membersData);
+    setReadiness(readinessData);
+
+    try {
+      const projectData = await getTeamProject(team.id);
+
+      setProject(projectData);
+
+      const projectTasksData = await getProjectTasks(
+        projectData.id
+      );
+
+      setProjectTasks(projectTasksData);
+
+      try {
+        const roadmapData =
+          await getProjectRoadmap(projectData.id);
+
+        setRoadmap(roadmapData);
+
+        const progressData =
+          await getRoadmapProgress(roadmapData.id);
+
+        setRoadmapProgress(progressData);
+      } catch (roadmapError) {
+        const message =
+          roadmapError.message?.toLowerCase() || "";
+
+        if (message.includes("roadmap not found")) {
+          setRoadmap(null);
+          setRoadmapProgress(null);
+        } else {
+          throw roadmapError;
+        }
+      }
+    } catch (projectError) {
+      const message =
+        projectError.message?.toLowerCase() || "";
+
+      if (message.includes("project not found")) {
+        clearTeamData();
+      } else {
+        throw projectError;
+      }
+    }
+  };
+
+  const findPreferredTeam = async (userTeams) => {
+    for (const team of userTeams) {
+      try {
+        await getTeamProject(team.id);
+        return team;
+      } catch (error) {
+        const message =
+          error.message?.toLowerCase() || "";
+
+        if (!message.includes("project not found")) {
+          throw error;
+        }
+      }
+    }
+
+    return userTeams[0];
+  };
+
+  const loadDashboard = async ({
+    refreshing = false,
+  } = {}) => {
+    try {
+      if (refreshing) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      setErrorMessage("");
+
+      const userData = await getCurrentUser();
+      setCurrentUser(userData);
+
+      const [
+        userTeams,
+        assignedTasks,
+        reputationData,
+      ] = await Promise.all([
+        getUserTeams(userData.id),
+        getUserTasks(userData.id),
+        getMyReputation(),
+      ]);
+
+      setTeams(userTeams);
+      setUserTasks(assignedTasks);
+      setReputation(reputationData);
+
+      if (userTeams.length > 0) {
+        const preferredTeam =
+          await findPreferredTeam(userTeams);
+
+        setActiveTeam(preferredTeam);
+        await loadTeamData(preferredTeam);
+      } else {
+        setActiveTeam(null);
+        setTeamMembers([]);
+        setReadiness(null);
+        clearTeamData();
+      }
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to load dashboard information."
+      );
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const handleTeamChange = async (event) => {
+    const selectedTeam = teams.find(
+      (team) => team.id === event.target.value
+    );
+
+    if (!selectedTeam) {
+      return;
+    }
+
+    try {
+      setIsRefreshing(true);
+      setErrorMessage("");
+      setActiveTeam(selectedTeam);
+
+      await loadTeamData(selectedTeam);
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to load the selected team."
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const filteredTeamMembers = useMemo(() => {
+    const normalizedSearch = search
+      .trim()
+      .toLowerCase();
+
+    if (!normalizedSearch) {
+      return teamMembers;
+    }
+
+    return teamMembers.filter((member) => {
+      return (
+        member.full_name
+          ?.toLowerCase()
+          .includes(normalizedSearch) ||
+        member.role_name
+          ?.toLowerCase()
+          .includes(normalizedSearch)
+      );
+    });
+  }, [search, teamMembers]);
+
+  const upcomingDeadlines = useMemo(() => {
+    const now = new Date();
+
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+
+    return userTasks
+      .filter((task) => {
+        if (!task.deadline) {
+          return false;
+        }
+
+        const deadline = new Date(task.deadline);
+
+        return (
+          !Number.isNaN(deadline.getTime()) &&
+          deadline >= today &&
+          task.status !== "done" &&
+          task.status !== "completed"
+        );
+      })
+      .sort(
+        (firstTask, secondTask) =>
+          new Date(firstTask.deadline) -
+          new Date(secondTask.deadline)
+      )
+      .slice(0, 4);
+  }, [userTasks]);
+
+  const recentActivities = useMemo(() => {
+    const activityLabels = {
+      team_joined: "joined a project team",
+      task_completed: "completed a task",
+      project_completed: "completed a project",
+      positive_feedback:
+        "received positive feedback",
+      deadline_missed: "missed a deadline",
+      left_project_early:
+        "left a project early",
+    };
+
+    return (reputation?.history || [])
+      .slice(0, 5)
+      .map((event) => ({
+        id: event.id,
+
+        action:
+          activityLabels[event.activity_type] ||
+          event.activity_type
+            ?.replaceAll("_", " ")
+            .replace(/\b\w/g, (letter) =>
+              letter.toUpperCase()
+            ),
+
+        points: event.points,
+        date: event.logged_at,
+      }));
+  }, [reputation]);
+
+  const currentPhase = useMemo(() => {
+    if (!roadmap?.phases?.length) {
+      return "Not available";
+    }
+
+    const sortedPhases = [...roadmap.phases].sort(
+      (first, second) =>
+        first.phase_order - second.phase_order
+    );
+
+    const inProgressPhase = sortedPhases.find(
+      (phase) => phase.status === "in_progress"
+    );
+
+    if (inProgressPhase) {
+      return inProgressPhase.phase_name;
+    }
+
+    const nextPhase = sortedPhases.find(
+      (phase) => phase.status === "todo"
+    );
+
+    if (nextPhase) {
+      return nextPhase.phase_name;
+    }
+
+    return (
+      sortedPhases[sortedPhases.length - 1]
+        ?.phase_name || "Completed"
+    );
+  }, [roadmap]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[450px] items-center justify-center">
+        <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full font-sans text-slate-800 antialiased dark:text-slate-100">
       <div className="space-y-6">
-        {/* Header */}
         <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -203,119 +409,184 @@ export default function Dashboard() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Welcome back,{" "}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {currentUser.full_name || "Student"}
+                {currentUser?.full_name || "Student"}
               </span>
               .
             </p>
           </div>
 
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <div className="relative w-full sm:w-52">
-              <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-                aria-hidden="true"
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {teams.length > 0 && (
+              <select
+                value={activeTeam?.id || ""}
+                onChange={handleTeamChange}
+                disabled={isRefreshing}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
+              >
+                {teams.map((team) => (
+                  <option
+                    key={team.id}
+                    value={team.id}
+                  >
+                    {team.team_name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                loadDashboard({
+                  refreshing: true,
+                })
+              }
+              disabled={isRefreshing}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  isRefreshing
+                    ? "animate-spin"
+                    : ""
+                }`}
               />
 
-              <input
-                type="search"
-                placeholder="Search team..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-indigo-950"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigate("/my-projects")}
-                className="flex-1 whitespace-nowrap rounded-xl border border-indigo-200 bg-white px-4 py-2 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-800 dark:bg-slate-900 dark:text-indigo-400 dark:hover:bg-indigo-950/40 sm:flex-none"
-              >
-                View Project
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/team-management")}
-                className="flex-1 whitespace-nowrap rounded-xl bg-indigo-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-800 dark:bg-indigo-700 dark:hover:bg-indigo-600 sm:flex-none"
-              >
-                Build Team
-              </button>
-            </div>
+              {isRefreshing
+                ? "Refreshing..."
+                : "Refresh"}
+            </button>
           </div>
         </section>
 
-        {/* First row */}
+        {errorMessage && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+            {errorMessage}
+          </div>
+        )}
+
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-12">
-          {/* Project */}
           <article className="flex min-h-56 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-2 lg:col-span-6">
-            <div>
-              <div className="flex items-start justify-between">
-                <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
-                  Active Project
-                </span>
+            {project ? (
+              <>
+                <div>
+                  <div className="flex items-start justify-between">
+                    <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+                      Active Project
+                    </span>
 
-                <Cpu className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
-              </div>
+                    <Cpu className="h-5 w-5 text-indigo-500" />
+                  </div>
 
-              <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
-                Current Academic Project
-              </h2>
+                  <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
+                    {project.title}
+                  </h2>
 
-              <div className="mt-5">
-                <div className="mb-2 flex justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
-                  <span>Overall progress</span>
-                  <span>{progress}%</span>
+                  <p className="mt-2 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                    {project.description ||
+                      "No project description available."}
+                  </p>
+
+                  <div className="mt-5">
+                    <div className="mb-2 flex justify-between text-xs font-bold">
+                      <span>Roadmap progress</span>
+
+                      <span>
+                        {roadmapProgress?.progress_percentage ??
+                          0}
+                        %
+                      </span>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-indigo-600 transition-all"
+                        style={{
+                          width: `${
+                            roadmapProgress?.progress_percentage ??
+                            0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-indigo-600"
-                    style={{ width: `${progress}%` }}
-                  />
+                <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-xs dark:border-slate-800">
+                  <div>
+                    <p className="text-slate-400">
+                      Phase
+                    </p>
+
+                    <p className="mt-1 font-bold">
+                      {currentPhase}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-slate-400">
+                      Tasks
+                    </p>
+
+                    <p className="mt-1 font-bold">
+                      {projectTasks.length}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-slate-400">
+                      Status
+                    </p>
+
+                    <p className="mt-1 font-bold capitalize">
+                      {project.status?.replaceAll(
+                        "_",
+                        " "
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <AlertCircle className="h-9 w-9 text-slate-300" />
 
-            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-100 pt-4 text-xs dark:border-slate-800">
-              <div>
-                <p className="text-slate-400 dark:text-slate-500">
-                  Phase
-                </p>
+                <h2 className="mt-3 font-bold">
+                  No project available
+                </h2>
 
-                <p className="mt-1 font-bold text-slate-800 dark:text-slate-200">
-                  Development
-                </p>
-              </div>
-
-              <div>
-                <p className="text-slate-400 dark:text-slate-500">
-                  Priority
-                </p>
-
-                <p className="mt-1 font-bold text-rose-600 dark:text-rose-400">
-                  High
+                <p className="mt-2 text-xs text-slate-500">
+                  {isLeader
+                    ? "Create or select a project for this team."
+                    : "The team leader has not created a project yet."}
                 </p>
               </div>
-
-              <div>
-                <p className="text-slate-400 dark:text-slate-500">
-                  Status
-                </p>
-
-                <p className="mt-1 font-bold text-slate-800 dark:text-slate-200">
-                  In Progress
-                </p>
-              </div>
-            </div>
+            )}
           </article>
 
-          {/* Team */}
           <article className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-3">
             <div>
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Current Team
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Current Team
+                </h2>
+
+                <Users className="h-4 w-4 text-indigo-500" />
+              </div>
+
+              <div className="relative mt-4">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
+                  placeholder="Search members..."
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800"
+                />
+              </div>
 
               <div className="mt-4 max-h-40 space-y-3 overflow-y-auto">
                 {filteredTeamMembers.map((member) => (
@@ -324,23 +595,23 @@ export default function Dashboard() {
                     className="flex items-center gap-3"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-                      {getInitials(member.name)}
+                      {getInitials(member.full_name)}
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {member.name}
+                      <p className="truncate text-xs font-bold">
+                        {member.full_name}
                       </p>
 
-                      <p className="truncate text-[10px] text-slate-400 dark:text-slate-500">
-                        {member.role}
+                      <p className="truncate text-[10px] text-slate-400">
+                        {member.role_name}
                       </p>
                     </div>
                   </div>
                 ))}
 
                 {filteredTeamMembers.length === 0 && (
-                  <p className="text-xs italic text-slate-400 dark:text-slate-500">
+                  <p className="text-xs italic text-slate-400">
                     No team members found.
                   </p>
                 )}
@@ -349,17 +620,18 @@ export default function Dashboard() {
 
             <button
               type="button"
-              onClick={() => navigate("/ai-matching")}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              onClick={() =>
+                navigate("/team-management")
+              }
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2 text-xs font-bold text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
             >
               <Plus className="h-4 w-4" />
-              Find Teammates
+              Manage Team
             </button>
           </article>
 
-          {/* Readiness */}
           <article className="flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-3">
-            <h2 className="self-start text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <h2 className="self-start text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Team Readiness
             </h2>
 
@@ -377,8 +649,10 @@ export default function Dashboard() {
                 />
 
                 <path
-                  className="text-indigo-600 dark:text-indigo-500"
-                  strokeDasharray={`${readiness}, 100`}
+                  className="text-indigo-600"
+                  strokeDasharray={`${
+                    readiness?.readiness_score ?? 0
+                  }, 100`}
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -388,162 +662,146 @@ export default function Dashboard() {
               </svg>
 
               <div className="absolute">
-                <p className="text-2xl font-black text-slate-900 dark:text-white">
-                  {readiness}%
+                <p className="text-2xl font-black">
+                  {readiness?.readiness_score ?? 0}%
                 </p>
 
-                <p className="text-[9px] text-slate-400 dark:text-slate-500">
+                <p className="text-[9px] text-slate-400">
                   Ready
                 </p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Team readiness is calculated from skills and availability.
+            <p className="text-xs text-slate-400">
+              {readiness?.member_count ?? 0} total{" "}
+              {(readiness?.member_count ?? 0) === 1
+                ? "member"
+                : "members"}
             </p>
           </article>
         </section>
 
-        {/* Second row */}
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-12">
-          {/* Deadlines */}
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-4">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Upcoming Deadlines
               </h2>
 
-              <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+              <Calendar className="h-4 w-4 text-slate-400" />
             </div>
 
             <div className="space-y-4">
-              {deadlines.map((deadline) => (
-                <div
-                  key={deadline.id}
-                  className="group flex items-center justify-between gap-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
+              {upcomingDeadlines.map((task) => {
+                const taskDate = formatDate(
+                  task.deadline
+                );
+
+                return (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-3"
+                  >
                     <div className="flex min-w-12 shrink-0 flex-col items-center rounded-xl bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
                       <span className="text-[9px] font-bold uppercase">
-                        {deadline.month}
+                        {taskDate?.month}
                       </span>
 
                       <span className="text-base font-bold">
-                        {deadline.day}
+                        {taskDate?.day}
                       </span>
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-200">
-                        {deadline.title}
+                      <p className="truncate text-xs font-bold">
+                        {task.title}
                       </p>
 
-                      <p className="mt-1 truncate text-[10px] text-slate-400 dark:text-slate-500">
-                        {deadline.status} • {deadline.location}
+                      <p className="mt-1 truncate text-[10px] capitalize text-slate-400">
+                        {task.priority || "medium"} priority
+                        {" • "}
+                        {task.status?.replaceAll(
+                          "_",
+                          " "
+                        )}
                       </p>
                     </div>
                   </div>
+                );
+              })}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCompleteDeadline(
-                        deadline.id,
-                        deadline.title
-                      )
-                    }
-                    className="rounded-lg p-1 text-slate-400 transition hover:text-emerald-600 dark:text-slate-500 dark:hover:text-emerald-400"
-                    aria-label={`Complete ${deadline.title}`}
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-
-              {deadlines.length === 0 && (
-                <p className="py-4 text-center text-xs italic text-slate-400 dark:text-slate-500">
+              {upcomingDeadlines.length === 0 && (
+                <p className="py-4 text-center text-xs italic text-slate-400">
                   No upcoming deadlines.
                 </p>
               )}
             </div>
           </article>
 
-          {/* Activity */}
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-5">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Recent Activity
               </h2>
 
-              <button
-                type="button"
-                onClick={() => setActivities([])}
-                className="text-[11px] font-bold text-slate-400 transition hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-              >
-                Clear
-              </button>
+              <History className="h-4 w-4 text-slate-400" />
             </div>
 
             <div className="max-h-48 space-y-4 overflow-y-auto">
-              {activities.map((activity) => (
+              {recentActivities.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start gap-3"
                 >
                   <div className="mt-1 rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
-                    {activity.type === "file" && (
-                      <FileText className="h-3 w-3" />
-                    )}
-
-                    {activity.type === "system" && (
-                      <CheckCircle2 className="h-3 w-3" />
-                    )}
-
-                    {activity.type === "chat" && (
-                      <MessageSquare className="h-3 w-3" />
-                    )}
+                    <CheckCircle2 className="h-3 w-3" />
                   </div>
 
-                  <div className="min-w-0 text-xs">
-                    <p className="break-words text-slate-600 dark:text-slate-300">
-                      <span className="font-bold text-slate-800 dark:text-white">
-                        {activity.user}
-                      </span>{" "}
-                      {activity.action}{" "}
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        {activity.target}
-                      </span>
+                  <div className="min-w-0 flex-1 text-xs">
+                    <p className="capitalize text-slate-700 dark:text-slate-300">
+                      {activity.action}
                     </p>
 
-                    <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                      {activity.time}
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      {formatDate(activity.date)?.full ||
+                        "Recently"}
                     </p>
                   </div>
+
+                  <span
+                    className={`text-xs font-bold ${
+                      activity.points >= 0
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }`}
+                  >
+                    {activity.points >= 0 ? "+" : ""}
+                    {activity.points}
+                  </span>
                 </div>
               ))}
 
-              {activities.length === 0 && (
-                <p className="py-4 text-center text-xs italic text-slate-400 dark:text-slate-500">
+              {recentActivities.length === 0 && (
+                <p className="py-4 text-center text-xs italic text-slate-400">
                   No recent activity.
                 </p>
               )}
             </div>
           </article>
 
-          {/* Reputation */}
           <article className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:col-span-2 lg:col-span-3">
             <div>
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Reputation Score
               </h2>
 
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-black text-slate-900 dark:text-white">
-                  {reputation}
+                <span className="text-4xl font-black">
+                  {reputation?.score ?? 0}
                 </span>
 
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  / 1000
+                <span className="text-xs text-slate-400">
+                  points
                 </span>
               </div>
 
@@ -553,24 +811,28 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Active Contributor
+                  <p className="text-xs font-bold">
+                    {reputation?.level ||
+                      "New Member"}
                   </p>
 
-                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                    Based on completed teamwork
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    {reputation?.total_events ?? 0}{" "}
+                    {(reputation?.total_events ?? 0) === 1
+                      ? "reputation event"
+                      : "reputation events"}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-[10px] text-slate-400 dark:border-slate-700 dark:text-slate-500">
-              <span>Performance</span>
-
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                High
-              </span>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/reputation")}
+              className="mt-4 border-t border-slate-100 pt-4 text-left text-[10px] font-bold text-indigo-600 dark:border-slate-700 dark:text-indigo-400"
+            >
+              View reputation details
+            </button>
           </article>
         </section>
       </div>
