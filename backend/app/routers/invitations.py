@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from app.database import get_db
 from app.models.user import User
 from app.routers.users import get_current_user
-from app.schemas.invitation import InvitationResponse
+from app.schemas.invitation import InvitationResponse, MyInvitationResponse
 from app.services.invitation_service import get_my_invitations, accept_invitation, decline_invitation
 
 router = APIRouter(
@@ -15,12 +15,14 @@ router = APIRouter(
 )
 
 
-@router.get("/me", response_model=list[InvitationResponse])
+@router.get("/me", response_model=list[MyInvitationResponse])
 def my_invitations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     return get_my_invitations(db, current_user.id)
+
+
 
 @router.put("/{invitation_id}/accept", response_model=InvitationResponse)
 def accept_team_invitation(

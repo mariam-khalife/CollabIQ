@@ -1,290 +1,305 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
-  Briefcase,
+  Loader2,
   RefreshCw,
+  Search,
   Send,
-  Trash2,
   UserMinus,
   UserPlus,
-  Users,
   X,
 } from "lucide-react";
 
+import {
+  getTeamInvitations,
+  getTeamMembers,
+  getTeamReadiness,
+  removeTeamMember,
+  sendTeamInvitation,
+} from "../services/teamService";
+
+import {
+  getCurrentUser,
+  getUserTeams,
+  searchUsers,
+} from "../services/userService";
+
+import { getRoles } from "../services/roleService";
+
 export default function TeamManagement() {
-  const [readiness, setReadiness] = useState(85);
-  const [skillCoverage, setSkillCoverage] = useState(92);
-  const [availability] = useState(78);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [activeTeam, setActiveTeam] = useState(null);
 
-  const [members, setMembers] = useState([
-    {
-      id: 1,
-      name: "Elena Vance",
-      email: "elena.v@university.edu",
-      role: "Lead Researcher",
-      specialization: "Quantum Computing",
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Marcus Thorne",
-      email: "m.thorne@collabiq.io",
-      role: "Data Architect",
-      specialization: "Python / R",
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Priya Sharma",
-      email: "p.sharma@research.org",
-      role: "UI/UX Designer",
-      specialization: "Figma / Design Ops",
-      status: "offline",
-    },
-  ]);
+  const [members, setMembers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [readiness, setReadiness] = useState(null);
 
-  const [invitations, setInvitations] = useState([
-    {
-      id: 1,
-      name: "Jordan Hayes",
-      email: "jordan.hayes@example.com",
-      role: "Frontend Developer",
-      status: "Waiting",
-      time: "Sent 2 days ago",
-    },
-    {
-      id: 2,
-      name: "Sarah Connor",
-      email: "sarah.connor@example.com",
-      role: "Backend Developer",
-      status: "Sent",
-      time: "Delivered",
-    },
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const [activeAction, setActiveAction] = useState(null);
+  const [showInvitationForm, setShowInvitationForm] =
+    useState(false);
 
-  const [invitationForm, setInvitationForm] = useState({
-    name: "",
-    email: "",
-    role: "",
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedRoleId, setSelectedRoleId] = useState("");
 
-  const [selectedMemberId, setSelectedMemberId] = useState("");
-  const [newRole, setNewRole] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleRefreshAnalysis = () => {
-    setIsAnalyzing(true);
-    setErrorMessage("");
-    setMessage("");
+  const isLeader =
+    currentUser &&
+    activeTeam &&
+    currentUser.id === activeTeam.leader_id;
 
-    setTimeout(() => {
-      // Temporary frontend simulation.
-      // Later replace this with the real readiness API.
-      setReadiness(85);
-      setSkillCoverage(92);
-      setIsAnalyzing(false);
-      setMessage("Team readiness analysis refreshed.");
-    }, 700);
-  };
-
-  const handleInvitationChange = (event) => {
-    const { name, value } = event.target;
-
-    setInvitationForm((previousForm) => ({
-      ...previousForm,
-      [name]: value,
-    }));
-  };
-
-  const handleSendInvitation = (event) => {
-    event.preventDefault();
-
+  const clearMessages = () => {
     setMessage("");
     setErrorMessage("");
+  };
 
-    if (
-      !invitationForm.name.trim() ||
-      !invitationForm.email.trim()
-    ) {
-      setErrorMessage("Name and email are required.");
+  const loadTeamData = async (
+    teamId,
+    leaderAccess = false
+  ) => {
+    const requests = [
+      getTeamMembers(teamId),
+      getTeamReadiness(teamId),
+    ];
+
+    if (leaderAccess) {
+      requests.push(getTeamInvitations(teamId));
+    }
+
+    const results = await Promise.all(requests);
+
+    setMembers(results[0]);
+    setReadiness(results[1]);
+    setInvitations(leaderAccess ? results[2] : []);
+  };
+
+  useEffect(() => {
+    const initializePage = async () => {
+      try {
+        setIsLoading(true);
+        clearMessages();
+
+        const userData = await getCurrentUser();
+        setCurrentUser(userData);
+
+        const [userTeams, roleData] = await Promise.all([
+          getUserTeams(userData.id),
+          getRoles(),
+        ]);
+
+        setTeams(userTeams);
+        setRoles(roleData);
+
+        if (userTeams.length > 0) {
+          const firstTeam = userTeams[0];
+
+          setActiveTeam(firstTeam);
+
+          await loadTeamData(
+            firstTeam.id,
+            firstTeam.leader_id === userData.id
+          );
+        }
+      } catch (error) {
+        setErrorMessage(
+          error.message ||
+            "Unable to load team information."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializePage();
+  }, []);
+
+  const handleTeamChange = async (event) => {
+    const selectedTeam = teams.find(
+      (team) => team.id === event.target.value
+    );
+
+    if (!selectedTeam) {
       return;
     }
 
-    const emailExists = invitations.some(
-      (invitation) =>
-        invitation.email.toLowerCase() ===
-        invitationForm.email.trim().toLowerCase()
-    );
+    try {
+      setIsLoading(true);
+      clearMessages();
 
-    if (emailExists) {
+      setActiveTeam(selectedTeam);
+
+      await loadTeamData(
+        selectedTeam.id,
+        selectedTeam.leader_id === currentUser?.id
+      );
+    } catch (error) {
       setErrorMessage(
-        "A pending invitation already exists for this email."
+        error.message ||
+          "Unable to load the selected team."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!activeTeam) {
+      return;
+    }
+
+    try {
+      setIsRefreshing(true);
+      clearMessages();
+
+      await loadTeamData(activeTeam.id, isLeader);
+
+      setMessage(
+        "Team information refreshed successfully."
+      );
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to refresh team information."
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleSearchUsers = async () => {
+    const cleanedQuery = searchQuery.trim();
+
+    if (cleanedQuery.length < 2) {
+      setErrorMessage(
+        "Enter at least 2 characters to search for a user."
       );
       return;
     }
 
-    const newInvitation = {
-      id: Date.now(),
-      name: invitationForm.name.trim(),
-      email: invitationForm.email.trim(),
-      role: invitationForm.role.trim() || "Team Member",
-      status: "Waiting",
-      time: "Sent just now",
-    };
+    try {
+      setIsSearching(true);
+      clearMessages();
 
-    setInvitations((previousInvitations) => [
-      newInvitation,
-      ...previousInvitations,
-    ]);
+      const results = await searchUsers(cleanedQuery);
 
-    setInvitationForm({
-      name: "",
-      email: "",
-      role: "",
-    });
+      setSearchResults(results);
+      setSelectedUser(null);
 
-    setActiveAction(null);
-    setMessage("Invitation sent successfully.");
+      if (results.length === 0) {
+        setMessage(
+          "No matching registered users were found."
+        );
+      }
+    } catch (error) {
+      setErrorMessage(
+        error.message || "Unable to search for users."
+      );
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const handleAssignRole = (event) => {
+  const handleSearchKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleSearchUsers();
+    }
+  };
+
+  const handleSendInvitation = async (event) => {
     event.preventDefault();
 
-    setMessage("");
-    setErrorMessage("");
-
-    if (!selectedMemberId) {
-      setErrorMessage("Select a team member.");
+    if (
+      !activeTeam ||
+      !selectedUser ||
+      !selectedRoleId
+    ) {
+      setErrorMessage(
+        "Select a user and a proposed role."
+      );
       return;
     }
 
-    if (!newRole.trim()) {
-      setErrorMessage("Enter the new role.");
-      return;
+    try {
+      setIsSubmitting(true);
+      clearMessages();
+
+      await sendTeamInvitation(activeTeam.id, {
+        invited_user_id: selectedUser.id,
+        proposed_role_id: selectedRoleId,
+      });
+
+      await loadTeamData(activeTeam.id, true);
+
+      setMessage(
+        `Invitation sent successfully to ${selectedUser.full_name}.`
+      );
+
+      setSearchQuery("");
+      setSearchResults([]);
+      setSelectedUser(null);
+      setSelectedRoleId("");
+      setShowInvitationForm(false);
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to send the invitation."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setMembers((previousMembers) =>
-      previousMembers.map((member) =>
-        member.id === Number(selectedMemberId)
-          ? {
-              ...member,
-              role: newRole.trim(),
-            }
-          : member
-      )
-    );
-
-    setSelectedMemberId("");
-    setNewRole("");
-    setActiveAction(null);
-    setMessage("Member role updated successfully.");
   };
 
-  const handleRemoveMember = () => {
-    setMessage("");
-    setErrorMessage("");
-
-    if (!selectedMemberId) {
-      setErrorMessage("Select a team member.");
-      return;
-    }
-
-    const selectedMember = members.find(
-      (member) => member.id === Number(selectedMemberId)
-    );
-
-    if (!selectedMember) {
-      setErrorMessage("The selected member was not found.");
+  const handleRemoveMember = async (member) => {
+    if (!activeTeam) {
       return;
     }
 
     const confirmed = window.confirm(
-      `Remove ${selectedMember.name} from the team?`
+      `Remove ${member.full_name} from this team?`
     );
 
     if (!confirmed) {
       return;
     }
 
-    setMembers((previousMembers) =>
-      previousMembers.filter(
-        (member) => member.id !== Number(selectedMemberId)
-      )
-    );
+    try {
+      clearMessages();
 
-    setSelectedMemberId("");
-    setActiveAction(null);
-    setMessage("Team member removed successfully.");
-  };
+      await removeTeamMember(
+        activeTeam.id,
+        member.user_id
+      );
 
-  const handleCancelInvite = (invitationId) => {
-    const invitation = invitations.find(
-      (currentInvitation) =>
-        currentInvitation.id === invitationId
-    );
+      await loadTeamData(activeTeam.id, isLeader);
 
-    if (!invitation) {
-      return;
+      setMessage(
+        `${member.full_name} was removed from the team.`
+      );
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to remove this member."
+      );
     }
-
-    const confirmed = window.confirm(
-      `Cancel the invitation sent to ${invitation.name}?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setInvitations((previousInvitations) =>
-      previousInvitations.filter(
-        (currentInvitation) =>
-          currentInvitation.id !== invitationId
-      )
-    );
-
-    setErrorMessage("");
-    setMessage("Invitation cancelled successfully.");
   };
 
-  const handleRemindInvite = (invitationId) => {
-    setInvitations((previousInvitations) =>
-      previousInvitations.map((invitation) =>
-        invitation.id === invitationId
-          ? {
-              ...invitation,
-              status: "Reminded",
-              time: "Reminder sent just now",
-            }
-          : invitation
-      )
-    );
-
-    setErrorMessage("");
-    setMessage("Invitation reminder sent.");
-  };
-
-  const openAction = (actionName) => {
-    setActiveAction(actionName);
-    setSelectedMemberId("");
-    setNewRole("");
-    setMessage("");
-    setErrorMessage("");
-  };
-
-  const closeAction = () => {
-    setActiveAction(null);
-    setSelectedMemberId("");
-    setNewRole("");
-    setInvitationForm({
-      name: "",
-      email: "",
-      role: "",
-    });
-    setErrorMessage("");
+  const closeInvitationForm = () => {
+    setShowInvitationForm(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setSelectedUser(null);
+    setSelectedRoleId("");
+    clearMessages();
   };
 
   const getInitials = (name) => {
@@ -300,572 +315,436 @@ export default function TeamManagement() {
       .toUpperCase();
   };
 
+  const formatInvitationDate = (dateValue) => {
+    if (!dateValue) {
+      return "Unknown date";
+    }
+
+    return new Date(dateValue).toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }
+    );
+  };
+
+  const inputClassName =
+    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:ring-indigo-950";
+
+  if (isLoading && !activeTeam) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-[1250px] space-y-5 p-1 text-slate-800 antialiased">
-      <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+    <div className="mx-auto w-full max-w-[1250px] space-y-5 p-1 text-slate-800 dark:text-slate-100">
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             Team Management
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Manage your team members, roles, invitations, and readiness.
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Manage team members, invitations, roles, and
+            readiness.
           </p>
         </div>
 
-        <span className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-700">
-          Active Team
-        </span>
+        {teams.length > 0 && (
+          <select
+            value={activeTeam?.id || ""}
+            onChange={handleTeamChange}
+            className={`${inputClassName} max-w-xs`}
+          >
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.team_name}
+              </option>
+            ))}
+          </select>
+        )}
       </section>
 
       {message && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
           {message}
         </div>
       )}
 
       {errorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
           {errorMessage}
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
-        <div className="space-y-4">
-          <section className="flex flex-col items-center rounded-xl border border-slate-100 bg-white p-4 text-center shadow-sm">
-            <div className="mb-3 flex w-full items-center justify-between">
-              <h2 className="text-xs font-bold tracking-tight text-slate-900">
-                Team Readiness
-              </h2>
+      {teams.length === 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            No team available
+          </h2>
 
-              <span className="rounded-md bg-indigo-50 p-1.5 text-indigo-600">
-                <BarChart3 className="h-4 w-4" />
-              </span>
-            </div>
-
-            <div className="relative my-2 flex h-28 w-28 items-center justify-center">
-              <svg
-                className="h-full w-full -rotate-90"
-                viewBox="0 0 36 36"
-              >
-                <path
-                  className="text-slate-100"
-                  strokeWidth="3"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-
-                <path
-                  className="text-indigo-600 transition-all duration-500"
-                  strokeDasharray={`${readiness}, 100`}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-
-              <div className="absolute text-center">
-                <span className="block text-xl font-black tracking-tight">
-                  {readiness}%
-                </span>
-
-                <span className="-mt-1 block text-[8px] font-bold uppercase tracking-wider text-slate-400">
-                  Ready
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 w-full space-y-3 text-left">
-              <div>
-                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500">
-                  <span>Skill Coverage</span>
-                  <span className="text-indigo-600">
-                    {skillCoverage}%
-                  </span>
-                </div>
-
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
-                  <div
-                    className="h-1.5 rounded-full bg-indigo-600 transition-all duration-500"
-                    style={{
-                      width: `${skillCoverage}%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1 flex justify-between text-[10px] font-bold text-slate-500">
-                  <span>Availability</span>
-                  <span className="text-indigo-600">
-                    {availability}%
-                  </span>
-                </div>
-
-                <div className="h-1.5 w-full rounded-full bg-slate-100">
-                  <div
-                    className="h-1.5 rounded-full bg-indigo-600"
-                    style={{
-                      width: `${availability}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleRefreshAnalysis}
-              disabled={isAnalyzing}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${
-                  isAnalyzing ? "animate-spin" : ""
-                }`}
-              />
-
-              {isAnalyzing
-                ? "Analyzing Team..."
-                : "Refresh Analysis"}
-            </button>
-          </section>
-
-          <section className="space-y-2.5 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-slate-400">
-              Team Leader Actions
-            </span>
-
-            <button
-              type="button"
-              onClick={() => openAction("invite")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 text-indigo-600" />
-
-                <span className="text-xs font-bold text-slate-700">
-                  Send New Invitation
-                </span>
-              </div>
-
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openAction("role")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-slate-500" />
-
-                <span className="text-xs font-bold text-slate-700">
-                  Assign Roles
-                </span>
-              </div>
-
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openAction("remove")}
-              className="group flex w-full items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50"
-            >
-              <div className="flex items-center gap-2">
-                <UserMinus className="h-4 w-4 text-rose-500" />
-
-                <span className="text-xs font-bold text-slate-700">
-                  Remove Member
-                </span>
-              </div>
-
-              <span className="text-xs text-slate-400 transition group-hover:translate-x-0.5">
-                ➔
-              </span>
-            </button>
-          </section>
-
-          {activeAction && (
-            <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-900">
-                  {activeAction === "invite" &&
-                    "Send New Invitation"}
-
-                  {activeAction === "role" &&
-                    "Assign Member Role"}
-
-                  {activeAction === "remove" &&
-                    "Remove Team Member"}
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Create or join a team before using Team
+            Management.
+          </p>
+        </section>
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+          <div className="space-y-4">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Team Readiness
                 </h2>
+
+                <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+
+              <div className="my-6 text-center">
+                <p className="text-4xl font-black text-indigo-600 dark:text-indigo-400">
+                  {readiness?.readiness_score ?? 0}%
+                </p>
+
+                <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                  {readiness?.label || "Not available"}
+                </p>
+
+                <p className="mt-2 text-xs text-slate-400">
+                  {readiness?.member_count ?? 0} total member
+                  {(readiness?.member_count ?? 0) === 1
+                    ? ""
+                    : "s"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-indigo-500"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${
+                    isRefreshing ? "animate-spin" : ""
+                  }`}
+                />
+
+                {isRefreshing
+                  ? "Refreshing..."
+                  : "Refresh"}
+              </button>
+            </section>
+
+            {isLeader && (
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Team Leader Actions
+                </p>
 
                 <button
                   type="button"
-                  onClick={closeAction}
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Close action form"
+                  onClick={() =>
+                    setShowInvitationForm((value) => !value)
+                  }
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 dark:hover:bg-indigo-500"
                 >
-                  <X className="h-4 w-4" />
+                  <UserPlus className="h-4 w-4" />
+                  Send New Invitation
                 </button>
-              </div>
+              </section>
+            )}
 
-              {activeAction === "invite" && (
-                <form
-                  onSubmit={handleSendInvitation}
-                  className="space-y-3"
-                >
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      Full Name
-                    </label>
-
-                    <input
-                      type="text"
-                      name="name"
-                      value={invitationForm.name}
-                      onChange={handleInvitationChange}
-                      placeholder="Enter the user name"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      Email
-                    </label>
-
-                    <input
-                      type="email"
-                      name="email"
-                      value={invitationForm.email}
-                      onChange={handleInvitationChange}
-                      placeholder="Enter the user email"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      Proposed Role
-                    </label>
-
-                    <input
-                      type="text"
-                      name="role"
-                      value={invitationForm.role}
-                      onChange={handleInvitationChange}
-                      placeholder="Example: Frontend Developer"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
-                  >
-                    <Send className="h-3.5 w-3.5" />
+            {isLeader && showInvitationForm && (
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="font-bold text-slate-900 dark:text-white">
                     Send Invitation
-                  </button>
-                </form>
-              )}
-
-              {activeAction === "role" && (
-                <form
-                  onSubmit={handleAssignRole}
-                  className="space-y-3"
-                >
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      Team Member
-                    </label>
-
-                    <select
-                      value={selectedMemberId}
-                      onChange={(event) =>
-                        setSelectedMemberId(event.target.value)
-                      }
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500"
-                    >
-                      <option value="">
-                        Select a member
-                      </option>
-
-                      {members.map((member) => (
-                        <option
-                          key={member.id}
-                          value={member.id}
-                        >
-                          {member.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      New Role
-                    </label>
-
-                    <input
-                      type="text"
-                      value={newRole}
-                      onChange={(event) =>
-                        setNewRole(event.target.value)
-                      }
-                      placeholder="Enter the new role"
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-xs font-bold text-white transition hover:bg-indigo-700"
-                  >
-                    <Briefcase className="h-3.5 w-3.5" />
-                    Save Role
-                  </button>
-                </form>
-              )}
-
-              {activeAction === "remove" && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-500">
-                      Team Member
-                    </label>
-
-                    <select
-                      value={selectedMemberId}
-                      onChange={(event) =>
-                        setSelectedMemberId(event.target.value)
-                      }
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-rose-500"
-                    >
-                      <option value="">
-                        Select a member
-                      </option>
-
-                      {members.map((member) => (
-                        <option
-                          key={member.id}
-                          value={member.id}
-                        >
-                          {member.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  </h2>
 
                   <button
                     type="button"
-                    onClick={handleRemoveMember}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-600 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+                    onClick={closeInvitationForm}
+                    className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    aria-label="Close invitation form"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Remove Member
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-              )}
-            </section>
-          )}
-        </div>
 
-        <div className="space-y-4 lg:col-span-2">
-          <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-            <div className="flex flex-col justify-between gap-3 border-b border-slate-50 bg-slate-50/30 p-4 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-sm font-extrabold tracking-tight text-slate-900">
-                  Current Team Members
-                </h2>
+                <form
+                  onSubmit={handleSendInvitation}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Search registered user
+                    </label>
 
-                <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-                  {members.length} contributor
-                  {members.length === 1 ? "" : "s"} found
-                </p>
-              </div>
-
-              <span className="w-fit rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-700">
-                Active Project
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-slate-50 bg-slate-50/10 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    <th className="p-3 pl-4">
-                      Member
-                    </th>
-
-                    <th className="p-3">Role</th>
-
-                    <th className="p-3">
-                      Specialization
-                    </th>
-
-                    <th className="p-3 pr-4 text-center">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-50 text-xs">
-                  {members.map((member) => (
-                    <tr
-                      key={member.id}
-                      className="transition hover:bg-slate-50/40"
-                    >
-                      <td className="p-3 pl-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 font-bold uppercase text-slate-700">
-                            {getInitials(member.name)}
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate font-bold leading-tight text-slate-900">
-                              {member.name}
-                            </p>
-
-                            <p className="mt-0.5 truncate text-[10px] font-normal text-slate-400">
-                              {member.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="p-3 font-medium text-slate-600">
-                        {member.role}
-                      </td>
-
-                      <td className="p-3">
-                        <span className="rounded bg-indigo-50/60 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
-                          {member.specialization}
-                        </span>
-                      </td>
-
-                      <td className="p-3 pr-4 text-center">
-                        <span
-                          className={`inline-block h-2 w-2 rounded-full ${
-                            member.status === "active"
-                              ? "bg-emerald-500"
-                              : "bg-slate-300"
-                          }`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-
-                  {members.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan="4"
-                        className="px-4 py-8 text-center text-xs text-slate-400"
-                      >
-                        No team members found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-extrabold tracking-tight text-slate-900">
-                  Pending Invitations
-                </h2>
-
-                <p className="mt-0.5 text-[10px] text-slate-400">
-                  Invitations waiting for a response
-                </p>
-              </div>
-
-              <span className="text-[11px] font-medium text-slate-400">
-                {invitations.length} outstanding
-              </span>
-            </div>
-
-            <div className="divide-y divide-slate-50">
-              {invitations.length === 0 ? (
-                <p className="py-5 text-center text-xs text-slate-400">
-                  No pending invitations.
-                </p>
-              ) : (
-                invitations.map((invitation) => (
-                  <div
-                    key={invitation.id}
-                    className="flex flex-col justify-between gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-xs font-bold text-slate-500">
-                        {getInitials(invitation.name)}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-slate-900">
-                          {invitation.name}
-                        </p>
-
-                        <p className="truncate text-[10px] text-slate-400">
-                          {invitation.email}
-                        </p>
-
-                        <p className="mt-0.5 text-[10px] text-slate-400">
-                          {invitation.role} •{" "}
-                          {invitation.time}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
-                        {invitation.status}
-                      </span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(event) =>
+                          setSearchQuery(event.target.value)
+                        }
+                        onKeyDown={handleSearchKeyDown}
+                        className={inputClassName}
+                        placeholder="Name or email"
+                      />
 
                       <button
                         type="button"
-                        onClick={() =>
-                          handleRemindInvite(
-                            invitation.id
-                          )
-                        }
-                        className="rounded p-1.5 text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800"
-                        title="Send reminder"
+                        onClick={handleSearchUsers}
+                        disabled={isSearching}
+                        className="rounded-lg bg-slate-900 px-3 text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
                       >
-                        <Send className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCancelInvite(
-                            invitation.id
-                          )
-                        }
-                        className="rounded p-1.5 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
-                        title="Cancel invitation"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        {isSearching ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </section>
+
+                  {searchResults.length > 0 && (
+                    <div className="max-h-44 space-y-2 overflow-y-auto">
+                      {searchResults.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => setSelectedUser(user)}
+                          className={`w-full rounded-lg border p-3 text-left transition ${
+                            selectedUser?.id === user.id
+                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
+                              : "border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">
+                            {user.full_name}
+                          </p>
+
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {user.email}
+                          </p>
+
+                          {user.university && (
+                            <p className="mt-1 text-xs text-slate-400">
+                              {user.university}
+                            </p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Proposed role
+                    </label>
+
+                    <select
+                      value={selectedRoleId}
+                      onChange={(event) =>
+                        setSelectedRoleId(event.target.value)
+                      }
+                      className={inputClassName}
+                    >
+                      <option value="">Select a role</option>
+
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.role_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      !selectedUser ||
+                      !selectedRoleId
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-indigo-500"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+
+                    {isSubmitting
+                      ? "Sending..."
+                      : "Send Invitation"}
+                  </button>
+                </form>
+              </section>
+            )}
+          </div>
+
+          <div className="space-y-4 lg:col-span-2">
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="border-b border-slate-100 p-4 dark:border-slate-800">
+                <h2 className="font-bold text-slate-900 dark:text-white">
+                  Current Team Members
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  {members.length} regular member
+                  {members.length === 1 ? "" : "s"}
+                </p>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {members.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-slate-400">
+                    No regular members have joined this team
+                    yet.
+                  </p>
+                ) : (
+                  members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          {getInitials(member.full_name)}
+                        </div>
+
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">
+                            {member.full_name}
+                          </p>
+
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {member.email}
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            {member.role_name}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            member.has_committed
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                          }`}
+                        >
+                          {member.has_committed
+                            ? "Committed"
+                            : "Pending"}
+                        </span>
+
+                        {isLeader && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveMember(member)
+                            }
+                            className="rounded-lg p-2 text-rose-500 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                            title="Remove member"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {isLeader && (
+              <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-slate-800">
+                  <div>
+                    <h2 className="font-bold text-slate-900 dark:text-white">
+                      Sent Invitations
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Invitations sent for this team
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                    {
+                      invitations.filter(
+                        (invitation) =>
+                          invitation.status === "pending"
+                      ).length
+                    }{" "}
+                    pending
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {invitations.length === 0 ? (
+                    <p className="p-8 text-center text-sm text-slate-400">
+                      No invitations have been sent for this
+                      team.
+                    </p>
+                  ) : (
+                    invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"
+                      >
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">
+                            {invitation.invited_user_name}
+                          </p>
+
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {invitation.invited_user_email}
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            {invitation.proposed_role_name}
+                          </p>
+                        </div>
+
+                        <div className="text-left sm:text-right">
+                          <span
+                            className={`inline-block rounded-full px-3 py-1 text-xs font-bold capitalize ${
+                              invitation.status === "accepted"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                                : invitation.status === "declined"
+                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                                  : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                            }`}
+                          >
+                            {invitation.status}
+                          </span>
+
+                          <p className="mt-2 text-xs text-slate-400">
+                            Sent{" "}
+                            {formatInvitationDate(
+                              invitation.sent_at
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

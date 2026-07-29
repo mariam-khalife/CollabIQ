@@ -15,7 +15,7 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 text-slate-800 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={closeSidebar}

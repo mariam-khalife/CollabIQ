@@ -1,328 +1,1221 @@
-import React, { useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Check,
+  ChevronRight,
+  Lightbulb,
+  Loader2,
+  Mail,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 
-export default function AITeamMatching() {
-  // State for Toast Notifications
-  const [toast, setToast] = useState(null);
-  
-  // State for tracking invited candidates by ID
-  const [invitedIds, setInvitedIds] = useState([]);
-  
-  // State for View Profile Modal
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
-  
-  // State for Adjust Parameters Panel
-  const [isParamOpen, setIsParamOpen] = useState(false);
-  const [minMatch, setMinMatch] = useState(80);
-  const [targetRole, setTargetRole] = useState('DevOps Specialist');
+import {
+  getCurrentUser,
+  getUserTeams,
+} from "../services/userService";
 
-  const initialCandidates = [
-    {
-      id: 1,
-      name: 'Elena Vance',
-      title: 'PhD Candidate • Stanford University',
-      match: 94,
-      avatar: 'https://plus.unsplash.com/premium_photo-1689551671541-31a345ce6ae0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mjl8fHVzZXIlMjBwcm9maWxlfGVufDB8fDB8fHww',
-     
-      tags: ['NATURAL LANGUAGE PROCESSING', 'PYTORCH', 'DATA ARCHITECTURE'],
-      experience: '6+ Years',
-      availability: 'Immediate',
-      bio: 'Elena focuses on building efficient large language models and distributed machine learning pipeline architectures at Stanford.'
-    },
-    {
-      id: 2,
-      name: 'Marcus Chen',
-      title: 'Senior Developer • MIT',
-      match: 88,
-      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fHVzZXIlMjBwcm9maWxlfGVufDB8fDB8fHww',
-      tags: ['DISTRIBUTED SYSTEMS', 'GO', 'KUBERNETES'],
-      experience: '4+ Years',
-      availability: '2 Weeks',
-      bio: 'Marcus is a systems infrastructure enthusiast with deep production knowledge of high-throughput cloud cluster automation.'
-    },
-    {
-      id: 3,
-      name: 'Sarah Jenkins',
-      title: 'Masters Student • ETH Zurich',
-      match: 82,
-      avatar: 'https://media.istockphoto.com/id/1092821522/photo/portrait-of-a-young-beautiful-well-dressed-business-woman.jpg?s=1024x1024&w=is&k=20&c=FuH0g_9l029H8bFRZZqkQtTMCnprcS6xtN-xV1YBlX8=',
-      
-      tags: ['AI ETHICS', 'RESEARCH', 'PYTHON'],
-      experience: '2+ Years',
-      availability: 'Immediate',
-      bio: 'Sarah leads cross-functional alignment initiatives exploring mathematical fairness constraints in deep neural frameworks.'
-    }
-  ];
+import {
+  getTeam,
+  sendTeamInvitation,
+} from "../services/teamService";
 
-  // Filter candidates dynamically based on parameter settings
-  const filteredCandidates = initialCandidates.filter(c => c.match >= minMatch);
+import { getRoles } from "../services/roleService";
 
-  // Trigger Toast Alert Helper
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
+import {
+  getTeammateRecommendations,
+} from "../services/teammateRecommendationService";
+
+export default function AiMatching() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const [teams, setTeams] = useState([]);
+  const [selectedTeamId, setSelectedTeamId] =
+    useState("");
+  const [selectedTeam, setSelectedTeam] =
+    useState(null);
+
+  const [roles, setRoles] = useState([]);
+  const [recommendations, setRecommendations] =
+    useState([]);
+
+  const [targetRole, setTargetRole] =
+    useState("");
+
+  const [minimumScore, setMinimumScore] =
+    useState(0);
+
+  const [requiredSkills, setRequiredSkills] =
+    useState("");
+
+  const [
+    requiredInterests,
+    setRequiredInterests,
+  ] = useState("");
+
+  const [
+    selectedCandidate,
+    setSelectedCandidate,
+  ] = useState(null);
+
+  const [
+    isCriteriaOpen,
+    setIsCriteriaOpen,
+  ] = useState(false);
+
+  const [isLoadingPage, setIsLoadingPage] =
+    useState(true);
+
+  const [
+    isLoadingRecommendations,
+    setIsLoadingRecommendations,
+  ] = useState(false);
+
+  const [
+    processingCandidateId,
+    setProcessingCandidateId,
+  ] = useState(null);
+
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
+
+  const clearMessages = () => {
+    setMessage("");
+    setErrorMessage("");
   };
 
-  // Toggle Invitation Action
-  const toggleInvite = (id, name) => {
-    if (invitedIds.includes(id)) {
-      setInvitedIds(invitedIds.filter(item => item !== id));
-      showToast(`Cancelled team invitation for ${name}.`);
-    } else {
-      setInvitedIds([...invitedIds, id]);
-      showToast(`Successfully sent team invitation to ${name}!`);
+  const parseCommaSeparatedValues = (value) => {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const loadInitialData = async () => {
+    try {
+      setIsLoadingPage(true);
+      clearMessages();
+
+      const [userData, rolesData] =
+        await Promise.all([
+          getCurrentUser(),
+          getRoles(),
+        ]);
+
+      setCurrentUser(userData);
+      setRoles(rolesData);
+
+      if (rolesData.length > 0) {
+        setTargetRole(
+          rolesData[0].role_name
+        );
+      }
+
+      const userTeams = await getUserTeams(
+        userData.id
+      );
+
+      const leaderTeams = userTeams.filter(
+        (team) =>
+          String(team.leader_id) ===
+          String(userData.id)
+      );
+
+      setTeams(leaderTeams);
+
+      if (leaderTeams.length > 0) {
+        setSelectedTeamId(
+          leaderTeams[0].id
+        );
+      }
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to load AI team matching data."
+      );
+    } finally {
+      setIsLoadingPage(false);
     }
   };
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const loadSelectedTeam = async () => {
+      if (!selectedTeamId) {
+        setSelectedTeam(null);
+        return;
+      }
+
+      try {
+        const teamData = await getTeam(
+          selectedTeamId
+        );
+
+        setSelectedTeam(teamData);
+      } catch (error) {
+        setErrorMessage(
+          error.message ||
+            "Unable to load the selected team."
+        );
+      }
+    };
+
+    loadSelectedTeam();
+  }, [selectedTeamId]);
+
+  const loadRecommendations = async () => {
+    if (!selectedTeamId || !targetRole) {
+      setRecommendations([]);
+      return;
+    }
+
+    try {
+      setIsLoadingRecommendations(true);
+      clearMessages();
+
+      const data =
+        await getTeammateRecommendations(
+          selectedTeamId,
+          {
+            targetRole,
+            requiredSkills:
+              parseCommaSeparatedValues(
+                requiredSkills
+              ),
+            requiredInterests:
+              parseCommaSeparatedValues(
+                requiredInterests
+              ),
+            minimumScore:
+              minimumScore / 100,
+            maximumResults: 5,
+          }
+        );
+
+      setRecommendations(data);
+    } catch (error) {
+      setRecommendations([]);
+
+      setErrorMessage(
+        error.message ||
+          "Unable to generate teammate recommendations."
+      );
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  };
+
+  useEffect(() => {
+    if (
+      selectedTeamId &&
+      targetRole
+    ) {
+      loadRecommendations();
+    }
+  }, [selectedTeamId, targetRole]);
+
+  const getRoleIdByName = (roleName) => {
+    const normalizedRoleName =
+      roleName.trim().toLowerCase();
+
+    const matchingRole = roles.find(
+      (role) =>
+        role.role_name
+          .trim()
+          .toLowerCase() ===
+        normalizedRoleName
+    );
+
+    return matchingRole?.id || null;
+  };
+
+  const handleInvite = async (
+    candidate
+  ) => {
+    const roleId = getRoleIdByName(
+      candidate.role
+    );
+
+    if (!roleId) {
+      setErrorMessage(
+        `The role "${candidate.role}" does not exist in the roles table.`
+      );
+      return;
+    }
+
+    try {
+      setProcessingCandidateId(
+        candidate.user_id
+      );
+
+      clearMessages();
+
+      await sendTeamInvitation(
+        selectedTeamId,
+        {
+          invited_user_id:
+            candidate.user_id,
+          proposed_role_id: roleId,
+        }
+      );
+
+      setRecommendations(
+        (currentRecommendations) =>
+          currentRecommendations.filter(
+            (item) =>
+              item.user_id !==
+              candidate.user_id
+          )
+      );
+
+      setSelectedCandidate(null);
+
+      setMessage(
+        `Invitation sent successfully to ${candidate.name}.`
+      );
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to send the team invitation."
+      );
+    } finally {
+      setProcessingCandidateId(null);
+    }
+  };
+
+  const candidateCards = useMemo(() => {
+    return recommendations.map(
+      (candidate) => {
+        const matchPercentage =
+          Math.round(
+            Number(
+              candidate.compatibility_score ||
+                0
+            ) * 100
+          );
+
+        return {
+          ...candidate,
+          matchPercentage,
+
+          displaySkills:
+            candidate.skills?.length > 0
+              ? candidate.skills
+              : ["No skills added"],
+
+          displayInterests:
+            candidate.interests?.length > 0
+              ? candidate.interests
+              : [],
+
+          displayUniversity:
+            candidate.university ||
+            "University not provided",
+
+          displayEmail:
+            candidate.email ||
+            "Email not provided",
+
+          displayAvailability:candidate.availability
+            ? candidate.availability
+              .replaceAll("_", " ")
+              .replace(/\b\w/g, (letter) => letter.toUpperCase())
+            : "Not specified",
+
+          displayExperience:
+            candidate.experience_level ||
+            "Not specified",
+
+          displayBio:
+            candidate.bio ||
+            "This candidate has not added a biography yet.",
+        };
+      }
+    );
+  }, [recommendations]);
+
+  const overallMatchQuality = useMemo(() => {
+    if (candidateCards.length === 0) {
+      return 0;
+    }
+
+    const total = candidateCards.reduce(
+      (sum, candidate) =>
+        sum +
+        candidate.matchPercentage,
+      0
+    );
+
+    return Math.round(
+      total / candidateCards.length
+    );
+  }, [candidateCards]);
+
+  const skillCoverage = useMemo(() => {
+    const requestedSkills =
+      parseCommaSeparatedValues(
+        requiredSkills
+      );
+
+    if (
+      requestedSkills.length === 0 ||
+      candidateCards.length === 0
+    ) {
+      return 0;
+    }
+
+    const normalizedCandidateSkills =
+      new Set(
+        candidateCards.flatMap(
+          (candidate) =>
+            (candidate.skills || []).map(
+              (skill) =>
+                skill
+                  .trim()
+                  .toLowerCase()
+            )
+        )
+      );
+
+    const matchedCount =
+      requestedSkills.filter((skill) =>
+        normalizedCandidateSkills.has(
+          skill
+            .trim()
+            .toLowerCase()
+        )
+      ).length;
+
+    return Math.round(
+      (matchedCount /
+        requestedSkills.length) *
+        100
+    );
+  }, [
+    candidateCards,
+    requiredSkills,
+  ]);
+
+  const availabilityFit = useMemo(() => {
+    if (candidateCards.length === 0) {
+      return 0;
+    }
+
+    const unavailableValues = new Set([
+      "",
+      "not specified",
+      "unavailable",
+      "not available",
+      "no",
+      "false",
+    ]);
+
+    const availableCount =
+      candidateCards.filter(
+        (candidate) =>
+          !unavailableValues.has(
+            candidate.displayAvailability
+              .trim()
+              .toLowerCase()
+          )
+      ).length;
+
+    return Math.round(
+      (availableCount /
+        candidateCards.length) *
+        100
+    );
+  }, [candidateCards]);
+
+  const isAvailable = (availability) => {
+    const normalized =
+      availability
+        .trim()
+        .toLowerCase();
+
+    return ![
+      "",
+      "not specified",
+      "unavailable",
+      "not available",
+      "no",
+      "false",
+    ].includes(normalized);
+  };
+
+  const getInitials = (name) => {
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
+  if (isLoadingPage) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full text-slate-800 antialiased p-1 max-w-[1250px] mx-auto relative">
-      
-      {/* Dynamic Toast Alert Notification */}
-      {toast && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-bounce">
-          <span>✨</span> {toast}
-        </div>
-      )}
-
-      {/* Top Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 mb-5">
-        <div className="space-y-1">
-          <span className="inline-block bg-[#EEF2FF] text-[#4F46E5] text-[9px] font-bold px-2 py-0.5 rounded tracking-wider uppercase">
-            ACTIVE ANALYSIS
+    <div className="relative mx-auto w-full max-w-[1400px] space-y-6 text-slate-800 antialiased dark:text-slate-100">
+      <section className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+        <div>
+          <span className="inline-flex rounded-md bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
+            AI Team Matching
           </span>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-            AI Recommendations for <span className="text-[#4F46E5]">Project: QuantumScribe</span>
+
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Top teammate recommendations
+            for your team
           </h1>
-          <p className="text-slate-500 text-[11px] max-w-3xl font-normal leading-relaxed">
-            Our matching engine has analyzed 450+ profiles to find candidates that bridge your team's current skill gaps in NLP and distributed systems.
+
+          <p className="mt-2 max-w-4xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+            Candidate profiles are ranked
+            according to skills, interests,
+            experience, availability, and
+            the selected team role.
           </p>
         </div>
-        
-        {/* Toggle Filter Panel Button */}
-        <button 
-          onClick={() => setIsParamOpen(true)}
-          className="flex items-center gap-1.5 border border-indigo-100 text-[#4F46E5] font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-50/50 transition text-[11px] bg-white shadow-sm whitespace-nowrap self-start lg:mt-1"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-          </svg>
-          Adjust Parameters {minMatch !== 80 && `(${minMatch}%+)`}
-        </button>
-      </div>
 
-      {/* Layout Content Wrapper */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
-        
-        {/* Left Side: Candidates Cards List */}
-        <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredCandidates.length === 0 ? (
-            <div className="col-span-2 bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-xs font-medium">
-              No candidates meet the minimum match parameter threshold. Try lowering it!
+        <button
+          type="button"
+          onClick={() =>
+            setIsCriteriaOpen(true)
+          }
+          disabled={!selectedTeamId}
+          className="flex w-fit items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-800 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+        >
+          <Settings2 className="h-4 w-4" />
+          Adjust Matching Criteria
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </section>
+
+      {message && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          {message}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+          {errorMessage}
+        </div>
+      )}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-xl bg-indigo-600 p-3 text-white shadow-sm">
+              <Lightbulb className="h-6 w-6" />
             </div>
-          ) : (
-            filteredCandidates.map((candidate) => {
-              const isInvited = invitedIds.includes(candidate.id);
-              return (
-                <div key={candidate.id} className="bg-white border border-slate-100 p-4 rounded-xl shadow-sm flex flex-col justify-between min-h-[290px] transition hover:border-slate-200">
-                  <div>
-                    {/* Card Head Details */}
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex gap-2.5">
-                        <img src={candidate.avatar} alt={candidate.name} className="w-10 h-10 rounded-lg object-cover bg-slate-50" />
-                        <div>
-                          <h3 className="font-bold text-slate-900 text-sm leading-tight">{candidate.name}</h3>
-                          <p className="text-[11px] text-slate-400 font-medium mt-0.5">{candidate.title}</p>
+
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">
+                Team:{" "}
+                <span className="text-indigo-600 dark:text-indigo-400">
+                  {selectedTeam?.team_name ||
+                    "Select a team"}
+                </span>
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Target role:{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {targetRole ||
+                    "Not selected"}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full lg:w-72">
+            <label
+              htmlFor="team-selection"
+              className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+            >
+              Select Leader Team
+            </label>
+
+            <select
+              id="team-selection"
+              value={selectedTeamId}
+              onChange={(event) =>
+                setSelectedTeamId(
+                  event.target.value
+                )
+              }
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              {teams.length === 0 ? (
+                <option value="">
+                  You do not lead any teams
+                </option>
+              ) : (
+                teams.map((team) => (
+                  <option
+                    key={team.id}
+                    value={team.id}
+                  >
+                    {team.team_name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Recommended Teammates
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Showing up to five of the
+              strongest eligible candidates.
+            </p>
+          </div>
+
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {candidateCards.length}{" "}
+            recommendation
+            {candidateCards.length === 1
+              ? ""
+              : "s"}
+          </span>
+        </div>
+
+        {isLoadingRecommendations ? (
+          <div className="flex min-h-[320px] items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          </div>
+        ) : candidateCards.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-900">
+            <Users className="mx-auto h-8 w-8 text-slate-400" />
+
+            <h3 className="mt-3 font-bold text-slate-800 dark:text-slate-200">
+              No recommendations found
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Try lowering the minimum
+              score or changing the target
+              role.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {candidateCards.map(
+              (candidate, index) => {
+                const candidateIsAvailable =
+                  isAvailable(
+                    candidate.displayAvailability
+                  );
+
+                return (
+                  <article
+                    key={candidate.user_id}
+                    className="flex min-h-[530px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-800"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xl font-black text-indigo-700 ring-4 ring-slate-50 dark:bg-indigo-950/60 dark:text-indigo-300 dark:ring-slate-800">
+                          {getInitials(
+                            candidate.name
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          {index === 0 && (
+                            <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                              <Sparkles className="h-3 w-3" />
+                              Top Match
+                            </span>
+                          )}
+
+                          <h3 className="truncate text-base font-bold text-slate-900 dark:text-white">
+                            {candidate.name}
+                          </h3>
+
+                          <p className="mt-0.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                            {candidate.role}
+                          </p>
+
+                          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                            {
+                              candidate.displayUniversity
+                            }
+                          </p>
+
+                          <div className="mt-1 flex min-w-0 items-center gap-1 text-xs text-slate-400">
+                            <Mail className="h-3 w-3 shrink-0" />
+
+                            <span className="truncate">
+                              {
+                                candidate.displayEmail
+                              }
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="w-8 h-8 rounded-full border-2 border-[#4F46E5] flex items-center justify-center text-[#4F46E5] font-black text-[10px] bg-[#EEF2FF]/50 shrink-0">
-                        {candidate.match}%
+
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-indigo-500 bg-indigo-50 text-sm font-black text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                        {
+                          candidate.matchPercentage
+                        }
+                        %
                       </div>
                     </div>
 
-                    {/* Skill Tags */}
-                    <div className="flex flex-wrap gap-1 mt-3">
-                      {candidate.tags.map((tag, i) => (
-                        <span key={i} className="bg-[#EEF2FF]/60 text-[#4F46E5] text-[8.5px] font-bold tracking-wide px-1.5 py-0.5 rounded">
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="mt-5">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Top Skills
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {candidate.displaySkills.map(
+                          (skill) => (
+                            <span
+                              key={skill}
+                              className="rounded-md bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                            >
+                              {skill}
+                            </span>
+                          )
+                        )}
+                      </div>
                     </div>
 
-                    <div className="my-3 border-t border-slate-100"></div>
+                    <div className="mt-5 border-t border-slate-100 pt-5 dark:border-slate-800">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Why this candidate
+                        matches
+                      </p>
 
-                    {/* Meta Parameters Grid */}
-                    <div className="grid grid-cols-2 gap-2">
+                      <div className="mt-3 flex items-start gap-2">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 rounded-full bg-emerald-500 p-0.5 text-white" />
+
+                        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                          {candidate.reason}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
                       <div>
-                        <p className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Experience</p>
-                        <p className="text-slate-900 font-extrabold mt-0.5 text-xs">{candidate.experience}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          Experience
+                        </p>
+
+                        <p className="mt-1 text-xs font-bold capitalize text-slate-800 dark:text-slate-200">
+                          {
+                            candidate.displayExperience
+                          }
+                        </p>
                       </div>
+
                       <div>
-                        <p className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Availability</p>
-                        <p className="text-[#4F46E5] font-extrabold mt-0.5 text-xs">{candidate.availability}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          Availability
+                        </p>
+
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              candidateIsAvailable
+                                ? "bg-emerald-500"
+                                : "bg-slate-400"
+                            }`}
+                          />
+
+                          <p
+                            className={`text-xs font-bold ${
+                              candidateIsAvailable
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-slate-500 dark:text-slate-400"
+                            }`}
+                          >
+                            {
+                              candidate.displayAvailability
+                            }
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Reactive Action Interactive Controls */}
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button 
-                      onClick={() => setSelectedCandidate(candidate)}
-                      className="border border-slate-200 text-slate-600 font-bold py-1.5 rounded-lg text-[11px] hover:bg-slate-50 transition shadow-sm"
-                    >
-                      View Profile
-                    </button>
-                    <button 
-                      onClick={() => toggleInvite(candidate.id, candidate.name)}
-                      className={`font-bold py-1.5 rounded-lg text-[11px] transition shadow-sm ${
-                        isInvited 
-                          ? 'bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100' 
-                          : 'bg-[#4F46E5] hover:bg-indigo-700 text-white'
-                      }`}
-                    >
-                      {isInvited ? 'Cancel Invite' : 'Invite Member'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                    <div className="mt-auto grid grid-cols-2 gap-3 pt-5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedCandidate(
+                            candidate
+                          )
+                        }
+                        className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        View Profile
+                      </button>
 
-        {/* Right Side: Dynamic AI Skill Analysis Card */}
-        <div className="bg-[#4F46E5] rounded-xl p-4 text-white shadow-md min-h-[290px] flex flex-col justify-between">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleInvite(
+                            candidate
+                          )
+                        }
+                        disabled={
+                          processingCandidateId ===
+                          candidate.user_id
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-indigo-500"
+                      >
+                        {processingCandidateId ===
+                        candidate.user_id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : null}
+
+                        Invite to Team
+                      </button>
+                    </div>
+                  </article>
+                );
+              }
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-700 to-violet-700 text-white shadow-lg">
+        <div className="grid grid-cols-1 gap-8 p-6 lg:grid-cols-[1.3fr_1fr] lg:p-8">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-1 bg-white/10 rounded-md">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-white/10 p-3">
+                <Sparkles className="h-6 w-6" />
               </div>
-              <h2 className="text-sm font-bold tracking-tight">AI Skill Analysis</h2>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+                  AI Matching Analysis
+                </p>
+
+                <h2 className="mt-1 text-xl font-bold">
+                  Why these teammates were
+                  recommended
+                </h2>
+              </div>
             </div>
-            <p className="text-indigo-100/90 text-[11px] font-normal leading-relaxed">
-              Based on your project goals, we've identified that the team lacks a <span className="font-bold text-white underline decoration-wavy decoration-indigo-300">"{targetRole}."</span> These suggestions have been weighted to prioritize candidates with cluster alignment.
+
+            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-indigo-100">
+              The recommendation engine
+              compared candidate profiles
+              with the selected role,
+              required skills, interests,
+              experience, and availability.
+              Current members, team leaders,
+              and pending invitees were
+              excluded.
             </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <AnalysisCard
+                icon={Target}
+                title="Skill Alignment"
+                text="Candidate skills are compared with the selected project requirements."
+              />
+
+              <AnalysisCard
+                icon={User}
+                title="Contribution Potential"
+                text="Experience and role suitability influence the final ranking."
+              />
+
+              <AnalysisCard
+                icon={ShieldCheck}
+                title="Team Compatibility"
+                text="Availability and complementary interests improve the match."
+              />
+            </div>
           </div>
 
-          <div className="space-y-3 mt-4 pt-3 border-t border-white/10">
-            <div>
-              <div className="flex justify-between text-[10px] font-bold mb-0.5">
-                <span>Project Synergy</span>
-                <span>92%</span>
-              </div>
-              <div className="w-full bg-indigo-700 rounded-full h-1">
-                <div className="bg-white h-1 rounded-full shadow-sm" style={{ width: '92%' }}></div>
-              </div>
-            </div>
+          <div className="space-y-5 rounded-2xl border border-white/10 bg-slate-950/15 p-5">
+            <AnalysisProgress
+              label="Overall Match Quality"
+              value={overallMatchQuality}
+            />
 
-            <div>
-              <div className="flex justify-between text-[10px] font-bold mb-0.5">
-                <span>Skill Coverage</span>
-                <span>78%</span>
-              </div>
-              <div className="w-full bg-indigo-700 rounded-full h-1">
-                <div className="bg-white h-1 rounded-full shadow-sm" style={{ width: '78%' }}></div>
-              </div>
-            </div>
+            <AnalysisProgress
+              label="Skill Coverage"
+              value={skillCoverage}
+            />
+
+            <AnalysisProgress
+              label="Availability Fit"
+              value={availabilityFit}
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                setIsCriteriaOpen(true)
+              }
+              disabled={!selectedTeamId}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-bold text-white transition hover:bg-white/20 disabled:opacity-50"
+            >
+              <Settings2 className="h-4 w-4" />
+              Refine Recommendations
+            </button>
           </div>
         </div>
+      </section>
 
-      </div>
-
-      {/* POPUP MODAL Component: View Profile Details */}
       {selectedCandidate && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 relative border border-slate-100">
-            <button 
-              onClick={() => setSelectedCandidate(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-sm"
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedCandidate(null)
+              }
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+              aria-label="Close profile"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
-            
-            <div className="flex items-center gap-3 mb-4">
-              <img src={selectedCandidate.avatar} alt={selectedCandidate.name} className="w-12 h-12 rounded-xl object-cover" />
-              <div>
-                <h3 className="font-extrabold text-slate-900 text-base">{selectedCandidate.name}</h3>
-                <p className="text-xs text-slate-500">{selectedCandidate.title}</p>
+
+            <div className="flex items-center gap-4 pr-8">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-xl font-black text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                {getInitials(
+                  selectedCandidate.name
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  {selectedCandidate.name}
+                </h3>
+
+                <p className="mt-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                  {selectedCandidate.role}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {
+                    selectedCandidate.displayUniversity
+                  }
+                </p>
+
+                <p className="mt-1 truncate text-xs text-slate-400">
+                  {
+                    selectedCandidate.displayEmail
+                  }
+                </p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4">
-              {selectedCandidate.bio}
-            </p>
+            <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                {
+                  selectedCandidate.displayBio
+                }
+              </p>
+            </div>
 
-            <div className="space-y-2 mb-5">
-              <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase block">Verified Core Skills</span>
-              <div className="flex flex-wrap gap-1">
-                {selectedCandidate.tags.map((tag, i) => (
-                  <span key={i} className="bg-slate-100 text-slate-700 text-[9px] font-semibold px-2 py-0.5 rounded">
-                    {tag}
-                  </span>
-                ))}
+            <div className="mt-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Skills
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedCandidate.displaySkills.map(
+                  (skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                    >
+                      {skill}
+                    </span>
+                  )
+                )}
               </div>
             </div>
 
-            <button 
-              onClick={() => {
-                toggleInvite(selectedCandidate.id, selectedCandidate.name);
-                setSelectedCandidate(null);
-              }}
-              className="w-full bg-[#4F46E5] text-white font-bold py-2 rounded-xl text-xs hover:bg-indigo-700 transition shadow-sm"
+            {selectedCandidate
+              .displayInterests.length >
+              0 && (
+              <div className="mt-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Interests
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedCandidate.displayInterests.map(
+                    (interest) => (
+                      <span
+                        key={interest}
+                        className="rounded-md bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+                      >
+                        {interest}
+                      </span>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                handleInvite(
+                  selectedCandidate
+                )
+              }
+              disabled={
+                processingCandidateId ===
+                selectedCandidate.user_id
+              }
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50 dark:hover:bg-indigo-500"
             >
-              {invitedIds.includes(selectedCandidate.id) ? 'Revoke Team Invitation' : 'Send Fast Track Invitation'}
+              {processingCandidateId ===
+              selectedCandidate.user_id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+
+              Send Team Invitation
             </button>
           </div>
         </div>
       )}
 
-      {/* SLIDEOUT SIDEBAR Component: Adjust Engine Parameters */}
-      {isParamOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end">
-          <div className="bg-white w-80 h-full p-5 shadow-2xl flex flex-col justify-between border-l border-slate-100 animate-slideLeft">
+      {isCriteriaOpen && (
+        <div className="fixed inset-0 z-[9999] flex justify-end bg-slate-950/60 backdrop-blur-sm">
+          <div className="flex h-screen w-full max-w-sm flex-col justify-between overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-extrabold text-slate-900 text-sm">Matching System Tuning</h3>
-                <button onClick={() => setIsParamOpen(false)} className="text-slate-400 text-xs font-bold hover:text-slate-600">✕ Close</button>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Adjust Matching Criteria
+                  </h3>
+
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Refine the teammate
+                    recommendation ranking.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsCriteriaOpen(false)
+                  }
+                  className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Close criteria"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <div className="space-y-5">
-                {/* Parameter 1: Cutoff threshold */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block">Min AI Confidence Filter ({minMatch}%)</label>
-                  <input 
-                    type="range" min="70" max="95" step="1" 
-                    value={minMatch} 
-                    onChange={(e) => setMinMatch(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              <div className="mt-8 space-y-6">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="minimum-score"
+                      className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                    >
+                      Minimum Match Score
+                    </label>
+
+                    <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                      {minimumScore}%
+                    </span>
+                  </div>
+
+                  <input
+                    id="minimum-score"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={minimumScore}
+                    onChange={(event) =>
+                      setMinimumScore(
+                        Number(
+                          event.target.value
+                        )
+                      )
+                    }
+                    className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-indigo-600 dark:bg-slate-700"
                   />
                 </div>
 
-                {/* Parameter 2: Targeted Role Gap */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide block">Target Gap Analysis Role</label>
-                  <select 
-                    value={targetRole} 
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs bg-slate-50 focus:outline-indigo-500"
+                <div>
+                  <label
+                    htmlFor="target-role"
+                    className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
                   >
-                    <option value="DevOps Specialist">DevOps Specialist</option>
-                    <option value="Data Pipeline Engineer">Data Pipeline Engineer</option>
-                    <option value="MLOps Infrastructure Architect">MLOps Infrastructure Architect</option>
+                    Target Role
+                  </label>
+
+                  <select
+                    id="target-role"
+                    value={targetRole}
+                    onChange={(event) =>
+                      setTargetRole(
+                        event.target.value
+                      )
+                    }
+                    className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    {roles.map((role) => (
+                      <option
+                        key={role.id}
+                        value={role.role_name}
+                      >
+                        {role.role_name}
+                      </option>
+                    ))}
                   </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="required-skills"
+                    className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                  >
+                    Required Skills
+                  </label>
+
+                  <input
+                    id="required-skills"
+                    type="text"
+                    value={requiredSkills}
+                    onChange={(event) =>
+                      setRequiredSkills(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Python, FastAPI, PostgreSQL"
+                    className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  />
+
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    Separate skills using
+                    commas.
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="required-interests"
+                    className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                  >
+                    Required Interests
+                  </label>
+
+                  <input
+                    id="required-interests"
+                    type="text"
+                    value={requiredInterests}
+                    onChange={(event) =>
+                      setRequiredInterests(
+                        event.target.value
+                      )
+                    }
+                    placeholder="AI, Backend Development"
+                    className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  />
+
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    Separate interests using
+                    commas.
+                  </p>
                 </div>
               </div>
             </div>
 
-            <button 
-              onClick={() => setIsParamOpen(false)}
-              className="w-full bg-[#4F46E5] text-white text-xs font-bold py-2.5 rounded-xl hover:bg-indigo-700 transition"
+            <button
+              type="button"
+              onClick={async () => {
+                setIsCriteriaOpen(false);
+                await loadRecommendations();
+              }}
+              disabled={
+                isLoadingRecommendations ||
+                !selectedTeamId ||
+                !targetRole
+              }
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-indigo-500"
             >
-              Apply System Configurations
+              {isLoadingRecommendations && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+
+              Apply Matching Criteria
             </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
+function AnalysisCard({
+  icon: Icon,
+  title,
+  text,
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/10 p-4">
+      <Icon className="h-5 w-5 text-indigo-100" />
+
+      <p className="mt-3 text-sm font-bold">
+        {title}
+      </p>
+
+      <p className="mt-1 text-xs leading-relaxed text-indigo-100">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function AnalysisProgress({
+  label,
+  value,
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-sm font-bold">
+        <span>{label}</span>
+        <span>{value}%</span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-indigo-950/40">
+        <div
+          className="h-full rounded-full bg-white transition-all duration-300"
+          style={{
+            width: `${Math.min(
+              Math.max(value, 0),
+              100
+            )}%`,
+          }}
+        />
+      </div>
     </div>
   );
 }

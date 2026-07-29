@@ -10,7 +10,7 @@ function Navbar({ onMenuClick }) {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
         {/* Mobile sidebar button */}
         <button
@@ -32,7 +32,7 @@ function Navbar({ onMenuClick }) {
           <input
             type="search"
             placeholder="Search projects..."
-            className="w-full rounded-xl bg-slate-100 py-2 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-xl bg-slate-100 py-2 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:ring-2 focus:ring-indigo-500 dark:bg-slate-800 dark:text-slate-200"
             aria-label="Search projects"
           />
         </div>
