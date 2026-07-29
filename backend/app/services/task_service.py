@@ -7,6 +7,7 @@ from app.models.roadmap import Roadmap, RoadmapPhase
 from app.models.task import Task
 from app.models.team import Team, TeamMember
 from app.models.user import User
+from app.models.notification import Notification
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.services.reputation_service import add_reputation_event
 from app.services import notification_service
@@ -54,6 +55,7 @@ def create_task(
         title=task_data.title,
         description=task_data.description,
         deadline=task_data.deadline,
+        priority=task_data.priority,
         status="todo"
     )
 
@@ -204,7 +206,24 @@ def delete_task(
     if not team or team.leader_id != current_user.id:
         return False
 
-    db.delete(task)
-    db.commit()
+    try:
+        db.query(Notification).filter(
+            Notification.related_id == task.id,
+            Notification.type.in_(
+                [
+                    "task_assignment",
+                    "deadline_reminder",
+                ]
+            ),
+        ).delete(
+            synchronize_session=False
+        )
 
-    return True
+        db.delete(task)
+        db.commit()
+
+        return True
+
+    except Exception:
+        db.rollback()
+        raise

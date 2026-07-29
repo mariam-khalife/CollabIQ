@@ -8,8 +8,8 @@ from app.models.user import User
 from app.routers.users import get_current_user
 from app.schemas.team import TeamCreate, TeamResponse, TeamMemberResponse 
 from app.schemas.team import TeamReadinessResponse
-from app.schemas.invitation import InvitationCreate, InvitationResponse
-from app.services.invitation_service import create_invitation
+from app.schemas.invitation import InvitationCreate, InvitationResponse, TeamInvitationDetailsResponse
+from app.services.invitation_service import create_invitation, get_team_invitations
 from app.services.team_service import create_team, get_team_by_id, get_team_members, remove_team_member, calculate_team_readiness
 
 router = APIRouter(
@@ -83,6 +83,35 @@ def invite_user_to_team(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Pending invitation already exists for this user"
+        )
+
+    return result
+
+@router.get(
+    "/{team_id}/invitations",
+    response_model=list[TeamInvitationDetailsResponse],
+)
+def list_team_invitations(
+    team_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = get_team_invitations(
+        db,
+        team_id,
+        current_user,
+    )
+
+    if result == "team_not_found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found",
+        )
+
+    if result == "not_leader":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the team leader can view sent invitations",
         )
 
     return result

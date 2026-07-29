@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class TeamCreate(BaseModel):
@@ -20,18 +20,17 @@ class TeamResponse(BaseModel):
         "from_attributes": True
     }
 
+
 class TeamMemberResponse(BaseModel):
     id: UUID
-    team_id: UUID
     user_id: UUID
+    full_name: str
+    email: EmailStr
     role_id: UUID
-    invitation_id: UUID
+    role_name: str
     has_committed: bool
     joined_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
 
 class TeamReadinessResponse(BaseModel):
     team_id: UUID

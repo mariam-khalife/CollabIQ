@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import Column, Date, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,7 +42,11 @@ class Task(Base):
         Date,
         nullable=True
     )
-
+    priority = Column(
+        String,
+        nullable=False,
+        default="medium",
+    )
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
