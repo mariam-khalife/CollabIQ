@@ -14,6 +14,7 @@ from app.routers import (
     notifications,
     reputation,
     roles,
+    teammate_recommendations,
 )
 from app.models.project_recommendation import ProjectRecommendation
 
@@ -40,6 +41,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(teams.router)
+app.include_router(teammate_recommendations.router)
 app.include_router(invitations.router)
 app.include_router(skills.router)
 app.include_router(interest.router)
@@ -49,6 +51,7 @@ app.include_router(tasks.router)
 app.include_router(notifications.router)
 app.include_router(reputation.router)
 app.include_router(roles.router)
+
 
 
 @app.get("/")
