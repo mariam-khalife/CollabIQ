@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -10,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import Role, Team, TeamInvitation, TeamMember, User  # noqa: E402
 
-DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/collabiq"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/collabiq"
+)
 
 
 @pytest.fixture
