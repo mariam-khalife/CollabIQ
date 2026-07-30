@@ -7,6 +7,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
 import AiMatching from "./pages/AiMatching";
+import AiSuggestions from "./pages/AiSuggestions";
 import TeamManagement from "./pages/TeamManagement";
 import Notifications from "./pages/Notifications";
 import MyProjects from "./pages/MyProjects";
@@ -57,6 +58,15 @@ function App() {
               <AiMatching />
             </Layout>
           }
+        />
+
+        <Route
+        path="/ai-suggestions"
+        element={
+          <Layout>
+            <AiSuggestions />
+            </Layout>
+        }
         />
 
         <Route

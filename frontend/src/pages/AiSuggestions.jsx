@@ -1,522 +1,740 @@
-// src/pages/AiSuggestions.jsx
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Search,
-  Filter,
-  Sparkles,
-  Clock,
-  Users,
-  ChevronRight,
+  AlertCircle,
   Bookmark,
-  ThumbsUp,
-  Target,
+  CheckCircle2,
+  ChevronRight,
   Lightbulb,
+  Loader2,
   Rocket,
-  Layers,
+  Search,
+  Sparkles,
+  Target,
+  ThumbsUp,
   X,
   Zap,
-  Code,
-  Database,
-  Cloud,
-  Brain,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const AiSuggestions = () => {
-  // State for filters
-  const [activeTab, setActiveTab] = useState("all");
+import { getCurrentUser, getUserTeams } from "../services/userService";
+import {
+  generateProjectRecommendations,
+  getProjectRecommendations,
+} from "../services/projectRecommendationService";
+import { createProject, getTeamProject } from "../services/projectService";
+
+const ALL_TAB = "allsuggestions";
+const SAVED_TAB = "savedideas";
+
+const normalizeDifficulty = (difficulty) => {
+  const value = (difficulty || "").toLowerCase();
+
+  if (value === "beginner") return "Easy";
+  if (value === "intermediate") return "Medium";
+  if (value === "advanced") return "Hard";
+
+  return difficulty || "Unknown";
+};
+
+const getDifficultyColor = (difficulty) => {
+  switch (normalizeDifficulty(difficulty)) {
+    case "Easy":
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
+    case "Medium":
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case "Hard":
+      return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+    default:
+      return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+  }
+};
+
+const getProjectIcon = (project) => {
+  const text = [
+    project.title,
+    project.description,
+    ...(project.required_technologies || []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (text.includes("ai") || text.includes("machine learning")) return "🧠";
+  if (text.includes("mobile") || text.includes("react native")) return "📱";
+  if (text.includes("security") || text.includes("blockchain")) return "🔐";
+  if (text.includes("education") || text.includes("study")) return "📚";
+  if (text.includes("health")) return "💙";
+
+  return "🚀";
+};
+
+export default function AiSuggestions() {
+  const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [activeTeam, setActiveTeam] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [existingProject, setExistingProject] = useState(null);
+
+  const [activeTab, setActiveTab] = useState(ALL_TAB);
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // State for interactions
   const [savedProjects, setSavedProjects] = useState([]);
   const [likedProjects, setLikedProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  // All projects data
-  const allProjects = [
-    {
-      id: 1,
-      title: "Decentralized Voting System",
-      description: "A blockchain-based application for secure, transparent campus elections using Ethereum and React.",
-      difficulty: "Medium",
-      duration: "4-6 Weeks",
-      tech: ["Ethereum", "React", "Solidity"],
-      match: 94,
-      isTopMatch: true,
-      icon: "🔗",
-      teamSize: "4-6",
-      category: "Blockchain",
-    },
-    {
-      id: 2,
-      title: "Mental Health Chatbot",
-      description: "An empathetic AI companion designed for student support using modern LLM APIs and a clean mobile UI.",
-      difficulty: "Medium",
-      duration: "6-8 Weeks",
-      tech: ["Node.js", "OpenAI", "React Native"],
-      match: 88,
-      isTopMatch: false,
-      icon: "🧠",
-      teamSize: "3-5",
-      category: "AI/ML",
-    },
-    {
-      id: 3,
-      title: "AI-Powered Research Assistant",
-      description: "An intelligent research tool that helps students find and summarize academic papers.",
-      difficulty: "Hard",
-      duration: "8-10 Weeks",
-      tech: ["Python", "TensorFlow", "NLP"],
-      match: 82,
-      isTopMatch: false,
-      icon: "📚",
-      teamSize: "4-6",
-      category: "AI/ML",
-    },
-    {
-      id: 4,
-      title: "Smart Campus Navigation",
-      description: "An AR-powered navigation app for large university campuses with real-time location tracking.",
-      difficulty: "Medium",
-      duration: "6-8 Weeks",
-      tech: ["React Native", "AR", "Firebase"],
-      match: 76,
-      isTopMatch: false,
-      icon: "📍",
-      teamSize: "3-4",
-      category: "Mobile",
-    },
-    {
-      id: 5,
-      title: "AI Study Planner",
-      description: "An intelligent study planner that optimizes student schedules using machine learning algorithms.",
-      difficulty: "Easy",
-      duration: "3-5 Weeks",
-      tech: ["Python", "React", "ML"],
-      match: 70,
-      isTopMatch: false,
-      icon: "📅",
-      teamSize: "2-3",
-      category: "AI/ML",
-    },
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
 
-  // Get filtered projects
-  const getFilteredProjects = () => {
-    let filtered = allProjects;
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-    // Search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((p) =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  const isLeader =
+    Boolean(currentUser) &&
+    Boolean(activeTeam) &&
+    currentUser.id === activeTeam.leader_id;
 
-    // Difficulty filter
-    if (filter === "easy") {
-      filtered = filtered.filter((p) => p.difficulty === "Easy");
-    } else if (filter === "medium") {
-      filtered = filtered.filter((p) => p.difficulty === "Medium");
-    } else if (filter === "topmatch") {
-      filtered = filtered.filter((p) => p.isTopMatch);
-    }
-
-    // Tab filter
-    if (activeTab === "savedideas") {
-      filtered = filtered.filter((p) => savedProjects.includes(p.id));
-    }
-
-    return filtered;
+  const clearMessages = () => {
+    setMessage("");
+    setErrorMessage("");
   };
 
-  const filteredProjects = getFilteredProjects();
+  const loadTeamRecommendations = async (team) => {
+    if (!team) return;
 
-  // Handlers
+    clearMessages();
+
+    try {
+      const [recommendationData, projectData] = await Promise.all([
+        getProjectRecommendations(team.id),
+        getTeamProject(team.id).catch((error) => {
+          const errorText = error.message?.toLowerCase() || "";
+          if (errorText.includes("project not found")) return null;
+          throw error;
+        }),
+      ]);
+
+      setRecommendations(recommendationData || []);
+      setExistingProject(projectData);
+    } catch (error) {
+      setRecommendations([]);
+      setExistingProject(null);
+      setErrorMessage(
+        error.message || "Unable to load project recommendations."
+      );
+    }
+  };
+
+  useEffect(() => {
+    const initializePage = async () => {
+      try {
+        setIsLoading(true);
+        clearMessages();
+      
+        const userData = await getCurrentUser();
+        setCurrentUser(userData);
+
+        const teamData = await getUserTeams(userData.id);
+        setTeams(teamData || []);
+
+        const initialTeam = teamData?.[0] || null;
+        setActiveTeam(initialTeam);
+
+        if (initialTeam) {
+          await loadTeamRecommendations(initialTeam);
+        }
+      } catch (error) {
+        setErrorMessage(
+          error.message ||
+            "Unable to initialize project recommendations."
+        );
+      } finally {
+        setIsLoading(false);
+     }
+    };
+
+   initializePage();
+  }, []);
+
+  const formattedProjects = useMemo(() => {
+    const sorted = [...recommendations].sort(
+      (first, second) =>
+        (second.confidence_score || 0) - (first.confidence_score || 0)
+    );
+
+    return sorted.map((project, index) => ({
+      ...project,
+      difficulty: normalizeDifficulty(project.difficulty_level),
+      tech: project.required_technologies || [],
+      match: Math.round((project.confidence_score || 0) * 100),
+      isTopMatch: index === 0,
+      icon: getProjectIcon(project),
+    }));
+  }, [recommendations]);
+
+  const filteredProjects = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return formattedProjects.filter((project) => {
+      if (activeTab === SAVED_TAB && !savedProjects.includes(project.id)) {
+        return false;
+      }
+
+      if (filter === "easy" && project.difficulty !== "Easy") return false;
+      if (filter === "medium" && project.difficulty !== "Medium") return false;
+      if (filter === "topmatch" && !project.isTopMatch) return false;
+
+      if (!normalizedSearch) return true;
+
+      return [
+        project.title,
+        project.description,
+        project.difficulty,
+        ...project.tech,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+    });
+  }, [
+    activeTab,
+    filter,
+    formattedProjects,
+    savedProjects,
+    searchQuery,
+  ]);
+
+  const averageMatch = useMemo(() => {
+    if (formattedProjects.length === 0) return 0;
+
+    return Math.round(
+      formattedProjects.reduce(
+        (total, project) => total + project.match,
+        0
+      ) / formattedProjects.length
+    );
+  }, [formattedProjects]);
+
+  const recommendedTechnologies = useMemo(() => {
+    const technologyCount = new Map();
+
+    formattedProjects.forEach((project) => {
+      project.tech.forEach((technology) => {
+        technologyCount.set(
+          technology,
+          (technologyCount.get(technology) || 0) + 1
+        );
+      });
+    });
+
+    return [...technologyCount.entries()]
+      .sort((first, second) => second[1] - first[1])
+      .slice(0, 5)
+      .map(([technology]) => technology);
+  }, [formattedProjects]);
+
+  const handleTeamChange = async (event) => {
+    const selectedTeam = teams.find(
+      (team) => team.id === event.target.value
+    );
+
+    setActiveTeam(selectedTeam || null);
+    setSelectedProject(null);
+    clearMessages();
+
+    if (!selectedTeam) {
+      setRecommendations([]);
+      setExistingProject(null);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await loadTeamRecommendations(selectedTeam);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!activeTeam) return;
+
+    try {
+      setIsGenerating(true);
+      clearMessages();
+
+      const generated = await generateProjectRecommendations(
+        activeTeam.id,
+        5
+      );
+
+      setRecommendations(generated || []);
+      setMessage("Project recommendations generated successfully.");
+    } catch (error) {
+      setErrorMessage(
+        error.message || "Unable to generate project recommendations."
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSelectProject = async (project) => {
+    if (!activeTeam) return;
+
+    if (existingProject) {
+      setErrorMessage(
+        `This team already has the project "${existingProject.title}".`
+      );
+      return;
+    }
+
+    try {
+      setIsSelecting(true);
+      clearMessages();
+
+      const createdProject = await createProject({
+        team_id: activeTeam.id,
+        recommendation_id: project.id,
+        title: project.title,
+        description: project.description,
+      });
+
+      setExistingProject(createdProject);
+      setSelectedProject(null);
+      setMessage(`"${createdProject.title}" was selected successfully.`);
+    } catch (error) {
+      setErrorMessage(
+        error.message || "Unable to select this project."
+      );
+    } finally {
+      setIsSelecting(false);
+    }
+  };
+
   const toggleSave = (id) => {
-    setSavedProjects((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    setSavedProjects((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
     );
   };
 
   const toggleLike = (id) => {
-    setLikedProjects((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    setLikedProjects((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
     );
   };
 
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case "Easy":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
-      case "Medium":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-      case "Hard":
-        return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
-      default:
-        return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
-    }
+  const resetFilters = () => {
+    setActiveTab(ALL_TAB);
+    setSearchQuery("");
+    setFilter("all");
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center">
+        <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (!activeTeam) {
+    return (
+      <div className="mx-auto max-w-4xl rounded-3xl border-2 border-dashed border-slate-200 bg-white py-20 text-center dark:border-slate-700 dark:bg-slate-900">
+        <Rocket className="mx-auto h-12 w-12 text-slate-300" />
+        <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
+          No team available
+        </h2>
+        <p className="mt-2 text-sm text-slate-500">
+          Create or join a team before requesting project recommendations.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Sparkles className="w-7 h-7 text-indigo-600" />
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+            <Sparkles className="h-7 w-7 text-indigo-600" />
             Project Discovery
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             AI-powered project recommendations for your team
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          {teams.length > 1 && (
+            <select
+              value={activeTeam.id}
+              onChange={handleTeamChange}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900"
+            >
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.team_name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              type="text"
+              type="search"
               placeholder="Search projects..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-48"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 sm:w-56"
             />
           </div>
         </div>
       </div>
 
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white mb-8 shadow-xl shadow-indigo-500/20">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {message && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          {message}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="mb-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white shadow-xl shadow-indigo-500/20 sm:p-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              <Rocket className="w-6 h-6" />
-              Ready to build, Team Alpha?
+            <h2 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
+              <Rocket className="h-6 w-6" />
+              Ready to build, {activeTeam.team_name}?
             </h2>
-            <p className="text-indigo-100 text-sm mt-1 max-w-2xl">
-              Based on your team's collective skills in React, Python, and UI/UX Design,
-              we've curated{" "}
-              <span className="font-bold text-white">{allProjects.length} projects</span>{" "}
-              that match your expertise.
+            <p className="mt-2 max-w-2xl text-sm text-indigo-100">
+              {formattedProjects.length > 0
+                ? `We found ${formattedProjects.length} ideas based on your team's combined skills, interests, and experience.`
+                : "Generate personalized project ideas using your team's combined skills, interests, and experience."}
             </p>
           </div>
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10 shrink-0">
-            <div className="text-center">
-              <p className="text-[10px] text-indigo-200 uppercase tracking-wider">AI-Powered</p>
-              <p className="font-bold flex items-center gap-1">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                Recommendations
-              </p>
+
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/10 px-4 py-2 backdrop-blur-sm">
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-indigo-200">
+                  AI-Powered
+                </p>
+                <p className="flex items-center gap-1 font-bold">
+                  <Sparkles className="h-4 w-4 text-amber-400" />
+                  Recommendations
+                </p>
+              </div>
+              <div className="h-8 w-px bg-white/20" />
+              <div className="text-center">
+                <p className="text-[10px] uppercase tracking-wider text-indigo-200">
+                  Avg. Match
+                </p>
+                <p className="text-lg font-bold">{averageMatch}%</p>
+              </div>
             </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div className="text-center">
-              <p className="text-[10px] text-indigo-200 uppercase tracking-wider">Skill Match</p>
-              <p className="font-bold text-lg">94%</p>
-            </div>
+
+            {isLeader && (
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {formattedProjects.length > 0
+                  ? "Regenerate Ideas"
+                  : "Generate Ideas"}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Results Count */}
-      <div className="flex justify-between items-center mb-3">
+      {existingProject && (
+        <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+          <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-300">
+            Selected project: {existingProject.title}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/my-projects")}
+            className="mt-2 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+          >
+            Open My Projects
+          </button>
+        </div>
+      )}
+
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Showing {filteredProjects.length} of {allProjects.length} projects
+          Showing {filteredProjects.length} of {formattedProjects.length} projects
         </p>
         {searchQuery && (
           <button
+            type="button"
             onClick={() => setSearchQuery("")}
-            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="text-sm text-indigo-600 hover:underline dark:text-indigo-400"
           >
             Clear search
           </button>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-2">
-          {["All Suggestions", "Saved Ideas"].map((tab) => {
-            const tabKey = tab.toLowerCase().replace(" ", "");
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tabKey)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  activeTab === tabKey
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}
-              >
-                {tab}
-                {tabKey === "savedideas" && savedProjects.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 bg-white/20 text-white rounded-full text-xs">
-                    {savedProjects.length}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {[
+            ["All Suggestions", ALL_TAB],
+            ["Saved Ideas", SAVED_TAB],
+          ].map(([label, key]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                activeTab === key
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+              }`}
+            >
+              {label}
+              {key === SAVED_TAB && savedProjects.length > 0 && (
+                <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                  {savedProjects.length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {["All", "Easy", "Medium", "Top Match"].map((tab) => {
-            const tabKey = tab.toLowerCase().replace(" ", "");
-            return (
-              <button
-                key={tab}
-                onClick={() => setFilter(tabKey)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  filter === tabKey
-                    ? "bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400"
-                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                {tab}
-              </button>
-            );
-          })}
+
+        <div className="flex flex-wrap gap-2">
+          {[
+            ["All", "all"],
+            ["Easy", "easy"],
+            ["Medium", "medium"],
+            ["Top Match", "topmatch"],
+          ].map(([label, key]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                filter === key
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                  : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Project Cards Grid */}
-      {filteredProjects.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">No projects found</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {activeTab === "savedideas" 
-              ? "You haven't saved any projects yet." 
-              : "Try adjusting your filters or search terms."}
+      {formattedProjects.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white py-16 text-center dark:border-slate-700 dark:bg-slate-900">
+          <Sparkles className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
+          <h3 className="mt-3 text-lg font-bold text-slate-700 dark:text-slate-300">
+            No project recommendations yet
+          </h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {isLeader
+              ? "Generate project ideas for your team."
+              : "The team leader has not generated recommendations yet."}
           </p>
-          {(activeTab === "savedideas" || searchQuery || filter !== "all") && (
-            <button
-              onClick={() => {
-                setActiveTab("all");
-                setSearchQuery("");
-                setFilter("all");
-              }}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Reset all filters
-            </button>
-          )}
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center dark:border-slate-800 dark:bg-slate-900">
+          <Search className="mx-auto h-12 w-12 text-slate-300" />
+          <h3 className="mt-3 text-lg font-bold text-slate-700 dark:text-slate-300">
+            No projects found
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Try adjusting your filters or search terms.
+          </p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            Reset all filters
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {filteredProjects.map((project) => {
             const isSaved = savedProjects.includes(project.id);
             const isLiked = likedProjects.includes(project.id);
 
             return (
-              <div
+              <article
                 key={project.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border p-6 transition-all hover:shadow-lg ${
+                className={`rounded-2xl border bg-white p-6 transition hover:shadow-lg dark:bg-slate-900 ${
                   project.isTopMatch
-                    ? "border-indigo-300 dark:border-indigo-700 shadow-md shadow-indigo-100/50 dark:shadow-indigo-900/20"
-                    : "border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800"
+                    ? "border-indigo-300 shadow-md shadow-indigo-100/50 dark:border-indigo-700 dark:shadow-indigo-900/20"
+                    : "border-slate-200 hover:border-indigo-200 dark:border-slate-800 dark:hover:border-indigo-800"
                 }`}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
                     <span className="text-2xl">{project.icon}</span>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-bold text-slate-900 dark:text-white">
                         {project.title}
                       </h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                      <p className="mt-1 line-clamp-3 text-sm text-slate-500 dark:text-slate-400">
                         {project.description}
                       </p>
                     </div>
                   </div>
+
                   {project.isTopMatch && (
-                    <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full whitespace-nowrap">
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                       ⭐ Top Match
                     </span>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 mt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                   <span
-                    className={`px-2.5 py-1 text-xs font-medium rounded-lg ${getDifficultyColor(
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium ${getDifficultyColor(
                       project.difficulty
                     )}`}
                   >
                     {project.difficulty}
                   </span>
+
                   <span className="flex items-center gap-1 text-xs text-slate-500">
-                    <Clock className="w-3.5 h-3.5" />
-                    {project.duration}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-slate-500">
-                    <Users className="w-3.5 h-3.5" />
-                    {project.teamSize} people
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-slate-500">
-                    <Zap className="w-3.5 h-3.5" />
+                    <Zap className="h-3.5 w-3.5" />
                     {project.match}% match
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {project.tech.map((tech, i) => (
-                    <span
-                      key={i}
-                      className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-medium rounded-lg"
-                    >
-                      {tech}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {project.tech.length > 0 ? (
+                    project.tech.map((technology) => (
+                      <span
+                        key={technology}
+                        className="rounded-lg bg-slate-100 px-2.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                      >
+                        {technology}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-400">
+                      No technologies specified
                     </span>
-                  ))}
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <button
+                      type="button"
                       onClick={() => toggleSave(project.id)}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      aria-label={isSaved ? "Remove saved project" : "Save project"}
+                      className={`rounded-lg p-1.5 transition ${
                         isSaved
-                          ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50"
+                          ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                           : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                       }`}
                     >
-                      <Bookmark className={`w-4 h-4 ${isSaved ? "fill-indigo-600" : ""}`} />
+                      <Bookmark
+                        className={`h-4 w-4 ${isSaved ? "fill-current" : ""}`}
+                      />
                     </button>
+
                     <button
+                      type="button"
                       onClick={() => toggleLike(project.id)}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      aria-label={isLiked ? "Remove like" : "Like project"}
+                      className={`rounded-lg p-1.5 transition ${
                         isLiked
-                          ? "text-rose-500 bg-rose-50 dark:bg-rose-950/30"
+                          ? "bg-rose-50 text-rose-500 dark:bg-rose-950/30"
                           : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                       }`}
                     >
-                      <ThumbsUp className={`w-4 h-4 ${isLiked ? "fill-rose-500" : ""}`} />
+                      <ThumbsUp
+                        className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`}
+                      />
                     </button>
-                    {isSaved && (
-                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
-                        Saved
-                      </span>
-                    )}
                   </div>
+
                   <button
+                    type="button"
                     onClick={() => setSelectedProject(project)}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1"
+                    className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-700"
                   >
                     View Details
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
       )}
 
-      {/* Team Stats Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        {/* Recommended Stack */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-          <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-indigo-600" />
-            Recommended Stack for Team Alpha
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Code className="w-4 h-4 text-indigo-500" /> React.js
+      {recommendedTechnologies.length > 0 && (
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="mb-4 flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+              <Target className="h-5 w-5 text-indigo-600" />
+              Recommended Technologies
+            </h3>
+
+            <div className="flex flex-wrap gap-2">
+              {recommendedTechnologies.map((technology) => (
+                <span
+                  key={technology}
+                  className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                >
+                  {technology}
                 </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">Team Expertise: High</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-emerald-500 h-2 rounded-full" style={{ width: "95%" }} />
-              </div>
+              ))}
             </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Database className="w-4 h-4 text-amber-500" /> PostgreSQL
-                </span>
-                <span className="text-amber-600 dark:text-amber-400 font-medium">Team Expertise: Mid</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-amber-500 h-2 rounded-full" style={{ width: "75%" }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Cloud className="w-4 h-4 text-blue-500" /> AWS Amplify
-                </span>
-                <span className="text-blue-600 dark:text-blue-400 font-medium">Learning Opp: +12%</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full" style={{ width: "60%" }} />
-              </div>
-            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="mb-4 flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+              <Lightbulb className="h-5 w-5 text-indigo-600" />
+              AI Insight
+            </h3>
+
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+              The first recommendation has the highest confidence score for
+              your team. Review its scope and technologies before selecting it.
+            </p>
           </div>
         </div>
+      )}
 
-        {/* Skill Gap Analysis */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-          <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-indigo-600" />
-            Skill Gap Analysis
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300">Frontend Dev</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-medium">100%</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-emerald-500 h-2 rounded-full" style={{ width: "100%" }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300">Backend / DB</span>
-                <span className="text-amber-600 dark:text-amber-400 font-medium">75%</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-amber-500 h-2 rounded-full" style={{ width: "75%" }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-700 dark:text-slate-300">AI / ML Basics</span>
-                <span className="text-rose-600 dark:text-rose-400 font-medium">40%</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-rose-500 h-2 rounded-full" style={{ width: "40%" }} />
-              </div>
-            </div>
-          </div>
-
-          {/* AI Tip */}
-          <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
-            <div className="flex items-start gap-3">
-              <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                <Lightbulb className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                  AI Tip: Choose the <span className="font-bold">"Mental Health Chatbot"</span> to level up your AI integration skills!
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Project Detail Modal */}
       {selectedProject && (
         <div
-          className="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm dark:bg-slate-950/80"
           onClick={() => setSelectedProject(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800"
-            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{selectedProject.icon}</span>
                 <div>
@@ -524,80 +742,90 @@ const AiSuggestions = () => {
                     {selectedProject.title}
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {selectedProject.category} • {selectedProject.difficulty}
+                    {selectedProject.difficulty} • {selectedProject.match}% match
                   </p>
                 </div>
               </div>
+
               <button
+                type="button"
                 onClick={() => setSelectedProject(null)}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="rounded-lg p-1 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Close project details"
               >
-                <X className="w-5 h-5 text-slate-400" />
+                <X className="h-5 w-5 text-slate-400" />
               </button>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
               {selectedProject.description}
             </p>
 
-            <div className="grid grid-cols-3 gap-3 mt-4">
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-slate-400 uppercase">Duration</p>
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  {selectedProject.duration}
-                </p>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-slate-400 uppercase">Team Size</p>
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  {selectedProject.teamSize}
-                </p>
-              </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-                <p className="text-[10px] text-slate-400 uppercase">Match</p>
-                <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                  {selectedProject.match}%
-                </p>
-              </div>
-            </div>
-
             <div className="mt-4">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tech Stack</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Required Technologies
+              </p>
+
               <div className="flex flex-wrap gap-1.5">
-                {selectedProject.tech.map((tech, i) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg"
-                  >
-                    {tech}
+                {selectedProject.tech.length > 0 ? (
+                  selectedProject.tech.map((technology) => (
+                    <span
+                      key={technology}
+                      className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {technology}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">
+                    No technologies specified
                   </span>
-                ))}
+                )}
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => {
-                  toggleSave(selectedProject.id);
-                  setSelectedProject(null);
-                }}
-                className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${
+                type="button"
+                onClick={() => toggleSave(selectedProject.id)}
+                className={`flex-1 rounded-xl py-2.5 font-medium transition ${
                   savedProjects.includes(selectedProject.id)
-                    ? "bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 }`}
               >
-                {savedProjects.includes(selectedProject.id) ? "Saved ✓" : "Save Project"}
+                {savedProjects.includes(selectedProject.id)
+                  ? "Saved ✓"
+                  : "Save Idea"}
               </button>
-              <button className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors">
-                View Team
-              </button>
+
+              {isLeader ? (
+                <button
+                  type="button"
+                  onClick={() => handleSelectProject(selectedProject)}
+                  disabled={isSelecting || Boolean(existingProject)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSelecting && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  {existingProject
+                    ? "Project Already Selected"
+                    : "Select Project"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSelectedProject(null)}
+                  className="flex-1 rounded-xl bg-slate-100 py-2.5 font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default AiSuggestions;
+}

@@ -7,6 +7,7 @@ import {
   Award,
   Settings,
   Bell,
+  Sparkles,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -32,6 +33,11 @@ const navigationItems = [
     path: "/ai-matching",
     icon: Users,
   },
+  {
+  label: "AI Project Suggestions",
+  path: "/ai-suggestions",
+  icon: Sparkles,
+ },
   {
     label: "My Projects",
     path: "/my-projects",
