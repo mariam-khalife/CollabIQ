@@ -2,6 +2,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.ai.teammate_recommendation import (
+    Candidate,
+    ProjectRequirements,
+    recommend_teammates,
+)
 from app.models.interest import Interest, UserInterest
 from app.models.invitation import TeamInvitation
 from app.models.project_recommendation import ProjectRecommendation
@@ -34,114 +39,37 @@ def normalize_collection(values: list[str] | set[str]) -> set[str]:
 
 
 def get_numeric_experience(value: str | None) -> int:
-    normalized_value = normalize_text(value)
-
-    return EXPERIENCE_LEVELS.get(
-        normalized_value,
-        1,
-    )
+    return EXPERIENCE_LEVELS.get(normalize_text(value), 1)
 
 
-def get_user_skills(
-    db: Session,
-    user_id: UUID,
-) -> list[str]:
+def get_user_skills(db: Session, user_id: UUID) -> list[str]:
     rows = (
         db.query(Skill.name)
-        .join(
-            UserSkill,
-            UserSkill.skill_id == Skill.id,
-        )
+        .join(UserSkill, UserSkill.skill_id == Skill.id)
         .filter(UserSkill.user_id == user_id)
         .all()
     )
-
     return [row[0] for row in rows]
 
 
-def get_user_interests(
-    db: Session,
-    user_id: UUID,
-) -> list[str]:
+def get_user_interests(db: Session, user_id: UUID) -> list[str]:
     rows = (
         db.query(Interest.name)
-        .join(
-            UserInterest,
-            UserInterest.interest_id == Interest.id,
-        )
+        .join(UserInterest, UserInterest.interest_id == Interest.id)
         .filter(UserInterest.user_id == user_id)
         .all()
     )
-
     return [row[0] for row in rows]
 
 
-def calculate_overlap_score(
-    candidate_values: set[str],
-    required_values: set[str],
-) -> float:
-    if not candidate_values or not required_values:
-        return 0.0
-
-    matching_values = (
-        candidate_values & required_values
-    )
-
-    return len(matching_values) / len(required_values)
-
-
-def generate_reason(
-    skills: list[str],
-    interests: list[str],
-    required_skills: set[str],
-    required_interests: set[str],
-    target_role: str,
-    compatibility_score: float,
-) -> str:
-    matched_skills = [
-        skill
-        for skill in skills
-        if normalize_text(skill) in required_skills
-    ]
-
-    matched_interests = [
-        interest
-        for interest in interests
-        if normalize_text(interest)
-        in required_interests
-    ]
-
-    reason_parts = []
-
-    if matched_skills:
-        reason_parts.append(
-            "matches the required skills: "
-            + ", ".join(matched_skills[:4])
-        )
-
-    if matched_interests:
-        reason_parts.append(
-            "shares relevant interests in "
-            + ", ".join(matched_interests[:3])
-        )
-
-    if target_role:
-        reason_parts.append(
-            f"can contribute as {target_role}"
-        )
-
-    if not reason_parts:
-        return (
-            "The candidate has a compatible profile "
-            "and may complement the current team."
-        )
-
-    return (
-        "This candidate "
-        + "; ".join(reason_parts)
-        + f". Overall compatibility: "
-        + f"{round(compatibility_score * 100)}%."
-    )
+def is_user_available(value: str | None) -> bool:
+    return normalize_text(value) not in {
+        "",
+        "unavailable",
+        "not available",
+        "false",
+        "no",
+    }
 
 
 def get_teammate_recommendations(
@@ -154,11 +82,7 @@ def get_teammate_recommendations(
     minimum_score: float = 0,
     maximum_results: int = 5,
 ):
-    team = (
-        db.query(Team)
-        .filter(Team.id == team_id)
-        .first()
-    )
+    team = db.query(Team).filter(Team.id == team_id).first()
 
     if not team:
         return "team_not_found"
@@ -174,15 +98,12 @@ def get_teammate_recommendations(
             .all()
         )
     }
-
     member_user_ids.add(team.leader_id)
 
     pending_user_ids = {
         row[0]
         for row in (
-            db.query(
-                TeamInvitation.invited_user_id
-            )
+            db.query(TeamInvitation.invited_user_id)
             .filter(
                 TeamInvitation.team_id == team_id,
                 TeamInvitation.status == "pending",
@@ -193,40 +114,31 @@ def get_teammate_recommendations(
 
     latest_project_recommendation = (
         db.query(ProjectRecommendation)
-        .filter(
-            ProjectRecommendation.team_id == team_id
-        )
-        .order_by(
-            ProjectRecommendation.created_at.desc()
-        )
+        .filter(ProjectRecommendation.team_id == team_id)
+        .order_by(ProjectRecommendation.created_at.desc())
         .first()
     )
 
     resolved_required_skills = (
         required_skills
         or (
-            latest_project_recommendation
-            .required_technologies
-            if latest_project_recommendation
-            and latest_project_recommendation
-            .required_technologies
+            latest_project_recommendation.required_technologies
+            if (
+                latest_project_recommendation
+                and latest_project_recommendation.required_technologies
+            )
             else []
         )
     )
 
-    normalized_required_skills = (
-        normalize_collection(
-            resolved_required_skills
-        )
+    normalized_required_skills = normalize_collection(
+        resolved_required_skills
+    )
+    normalized_required_interests = normalize_collection(
+        required_interests or []
     )
 
-    normalized_required_interests = (
-        normalize_collection(
-            required_interests or []
-        )
-    )
-
-    candidates = (
+    database_candidates = (
         db.query(User)
         .filter(
             User.id.notin_(
@@ -236,121 +148,81 @@ def get_teammate_recommendations(
         .all()
     )
 
+    engine_candidates = []
+    candidate_details = {}
+
+    for user in database_candidates:
+        user_skills = get_user_skills(db, user.id)
+        user_interests = get_user_interests(db, user.id)
+        user_id = str(user.id)
+
+        engine_candidates.append(
+            Candidate(
+                user_id=user_id,
+                name=user.full_name,
+                role="",
+                skills=normalize_collection(user_skills),
+                interests=normalize_collection(user_interests),
+                experience_level=get_numeric_experience(
+                    user.experience_level
+                ),
+                is_available=is_user_available(
+                    user.availability
+                ),
+            )
+        )
+
+        candidate_details[user_id] = {
+            "email": user.email,
+            "university": user.university,
+            "bio": user.bio,
+            "availability": user.availability,
+            "experience_level": user.experience_level,
+            "skills": user_skills,
+            "interests": user_interests,
+        }
+
+    requirements = ProjectRequirements(
+        missing_role=target_role,
+        required_skills=normalized_required_skills,
+        required_interests=normalized_required_interests,
+        min_experience_level=5,
+        requires_availability=True,
+    )
+
+    safe_maximum = min(max(maximum_results, 1), 5)
+
+    engine_results = recommend_teammates(
+        engine_candidates,
+        requirements,
+        max_results=safe_maximum,
+    )
+
     recommendations = []
 
-    for candidate in candidates:
-        candidate_skills = get_user_skills(
-            db,
-            candidate.id,
-        )
-
-        candidate_interests = get_user_interests(
-            db,
-            candidate.id,
-        )
-
-        normalized_candidate_skills = (
-            normalize_collection(candidate_skills)
-        )
-
-        normalized_candidate_interests = (
-            normalize_collection(
-                candidate_interests
-            )
-        )
-
-        skill_score = calculate_overlap_score(
-            normalized_candidate_skills,
-            normalized_required_skills,
-        )
-
-        interest_score = calculate_overlap_score(
-            normalized_candidate_interests,
-            normalized_required_interests,
-        )
-
-        experience_score = min(
-            get_numeric_experience(
-                candidate.experience_level
-            )
-            / 5,
-            1,
-        )
-
-        availability_value = normalize_text(
-            candidate.availability
-        )
-
-        availability_score = (
-            1.0
-            if availability_value
-            not in {
-                "",
-                "unavailable",
-                "not available",
-                "false",
-                "no",
-            }
-            else 0.0
-        )
-
-        role_score = 1.0 if target_role else 0.0
-
-        compatibility_score = round(
-            (
-                skill_score * 0.40
-                + role_score * 0.25
-                + interest_score * 0.15
-                + experience_score * 0.10
-                + availability_score * 0.10
-            ),
-            4,
-        )
-
-        if compatibility_score < minimum_score:
+    for result in engine_results:
+        if result["compatibility_score"] < minimum_score:
             continue
+
+        details = candidate_details[result["user_id"]]
 
         recommendations.append(
             {
-                "user_id": candidate.id,
-                "name": candidate.full_name,
-                "email": candidate.email,
-                "role": target_role,
+                "user_id": UUID(result["user_id"]),
+                "name": result["name"],
+                "email": details["email"],
+                "role": result["role"],
                 "compatibility_score":
-                    compatibility_score,
-                "reason": generate_reason(
-                    candidate_skills,
-                    candidate_interests,
-                    normalized_required_skills,
-                    normalized_required_interests,
-                    target_role,
-                    compatibility_score,
-                ),
-                "university":
-                    candidate.university,
-                "bio": candidate.bio,
-                "availability":
-                    candidate.availability,
+                    result["compatibility_score"],
+                "reason": result["reason"],
+                "university": details["university"],
+                "bio": details["bio"],
+                "availability": details["availability"],
                 "experience_level":
-                    candidate.experience_level,
-                "skills": candidate_skills,
-                "interests":
-                    candidate_interests,
+                    details["experience_level"],
+                "skills": details["skills"],
+                "interests": details["interests"],
             }
         )
 
-    recommendations.sort(
-        key=lambda recommendation: (
-            -recommendation[
-                "compatibility_score"
-            ],
-            recommendation["name"].lower(),
-        )
-    )
-
-    safe_maximum = min(
-        max(maximum_results, 1),
-        5,
-    )
-
-    return recommendations[:safe_maximum]
+    return recommendations
