@@ -172,17 +172,27 @@ def calculate_team_readiness(
 
     members = get_team_members(db, team_id)
 
-    # Count the team leader in addition to regular members.
+    # Include the team leader in the displayed count.
     member_count = len(members) + 1
 
-    if member_count == 1:
-        score = 40
-    elif member_count == 2:
-        score = 60
-    elif member_count == 3:
-        score = 75
-    else:
-        score = 90
+    committed_members = [
+        member
+        for member in members
+        if member.get("has_committed") is True
+    ]
+
+    committed_count = len(committed_members)
+
+    # Team leader contributes 20 points.
+    score = 20
+
+    # Accepted members contribute up to 40 points.
+    score += min(len(members) * 20, 40)
+
+    # Committed members contribute up to 40 points.
+    score += min(committed_count * 20, 40)
+
+    score = min(score, 100)
 
     if score >= 90:
         label = "Excellent"
@@ -190,6 +200,8 @@ def calculate_team_readiness(
         label = "Good"
     elif score >= 60:
         label = "Fair"
+    elif score >= 40:
+        label = "Developing"
     else:
         label = "Needs Work"
 
@@ -203,4 +215,5 @@ def calculate_team_readiness(
         "readiness_score": score,
         "label": label,
         "member_count": member_count,
+        "committed_member_count": committed_count,
     }
