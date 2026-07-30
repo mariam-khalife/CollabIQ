@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
-from ai.teammate_recommendation import (
+from backend.app.ai.teammate_recommendation import (
     Candidate,
     ProjectRequirements,
     filter_eligible_candidates,
