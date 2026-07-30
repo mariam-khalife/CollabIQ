@@ -71,7 +71,7 @@ def create_task(
                 title="New Task Assigned",
                 message=f'You were assigned the task "{task.title}".',
                 related_id=task.id,
-                action_url=f"/tasks/{task.id}",
+                action_url="/my-projects",
             )
 
         db.commit()
@@ -139,7 +139,7 @@ def update_task(
             title="Task Assigned",
             message=f'You were assigned the task "{task.title}".',
             related_id=task.id,
-            action_url=f"/tasks/{task.id}",
+            action_url="/my-projects",
         )
 
     if (

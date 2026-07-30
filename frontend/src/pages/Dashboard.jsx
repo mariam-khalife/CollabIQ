@@ -39,6 +39,10 @@ import {
 } from "../services/taskService";
 
 import { getMyReputation } from "../services/reputationService";
+import {
+  getNotifications,
+  markNotificationAsRead,
+} from "../services/notificationService";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -59,6 +63,7 @@ export default function Dashboard() {
   const [userTasks, setUserTasks] = useState([]);
 
   const [reputation, setReputation] = useState(null);
+  const [notifications, setNotifications] = useState([]);
 
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -212,15 +217,18 @@ export default function Dashboard() {
         userTeams,
         assignedTasks,
         reputationData,
+        notificationsData,
       ] = await Promise.all([
         getUserTeams(userData.id),
         getUserTasks(userData.id),
         getMyReputation(),
+        getNotifications(),
       ]);
 
       setTeams(userTeams);
       setUserTasks(assignedTasks);
       setReputation(reputationData);
+      setNotifications(notificationsData);
 
       if (userTeams.length > 0) {
         const preferredTeam =
@@ -328,34 +336,163 @@ export default function Dashboard() {
   }, [userTasks]);
 
   const recentActivities = useMemo(() => {
-    const activityLabels = {
-      team_joined: "joined a project team",
-      task_completed: "completed a task",
-      project_completed: "completed a project",
-      positive_feedback:
-        "received positive feedback",
-      deadline_missed: "missed a deadline",
-      left_project_early:
-        "left a project early",
+    const reputationLabels = {
+      team_joined: "Joined a project team",
+      task_completed: "Completed a task",
+      project_completed: "Completed a project",
+      positive_feedback: "Received positive feedback",
+      deadline_missed: "Missed a deadline",
+      left_project_early: "Left a project early",
     };
 
-    return (reputation?.history || [])
-      .slice(0, 5)
-      .map((event) => ({
-        id: event.id,
+    const notificationActivities = (
+      notifications || []
+    ).map((notification) => ({
+      id: `notification-${notification.id}`,
+      source: "notification",
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      date: notification.created_at,
+      isRead: notification.is_read,
+      points: null,
+      relatedId: notification.related_id,
+      actionUrl: notification.action_url,
+    }));
 
-        action:
-          activityLabels[event.activity_type] ||
-          event.activity_type
-            ?.replaceAll("_", " ")
-            .replace(/\b\w/g, (letter) =>
-              letter.toUpperCase()
-            ),
+    const reputationActivities = (
+      reputation?.history || []
+    ).map((event) => ({
+      id: `reputation-${event.id}`,
+      source: "reputation",
+      type: event.activity_type,
+      title:
+        reputationLabels[event.activity_type] ||
+        event.activity_type
+          ?.replaceAll("_", " ")
+          .replace(/\b\w/g, (letter) =>
+            letter.toUpperCase()
+          ),
+      message:
+        event.points >= 0
+          ? `You earned ${event.points} reputation points.`
+          : `You lost ${Math.abs(
+              event.points
+            )} reputation points.`,
+      date: event.logged_at,
+      isRead: true,
+      points: event.points,
+      actionUrl: "/reputation",
+    }));
 
-        points: event.points,
-        date: event.logged_at,
-      }));
-  }, [reputation]);
+    return [
+      ...notificationActivities,
+      ...reputationActivities,
+    ]
+      .filter((activity) => activity.date)
+      .sort(
+        (firstActivity, secondActivity) =>
+          new Date(secondActivity.date) -
+          new Date(firstActivity.date)
+      )
+      .slice(0, 5);
+  }, [notifications, reputation]);
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case "task_assignment":
+        return CheckCircle2;
+
+      case "deadline_reminder":
+        return Calendar;
+
+      case "invitation":
+      case "team_update":
+      case "team_joined":
+        return Users;
+
+      case "project_update":
+      case "project_completed":
+        return Cpu;
+
+      case "positive_feedback":
+      case "task_completed":
+        return Award;
+
+      default:
+        return History;
+    }
+  };
+
+
+  const handleActivityClick = async (activity) => {
+    try {
+      setErrorMessage("");
+
+      if (
+        activity.source === "notification" &&
+        !activity.isRead
+      ) {
+        const notificationId = activity.id.replace(
+          "notification-",
+          ""
+        );
+
+        await markNotificationAsRead(notificationId);
+
+        setNotifications((currentNotifications) =>
+          currentNotifications.map((notification) =>
+            String(notification.id) ===
+            String(notificationId)
+              ? {
+                  ...notification,
+                  is_read: true,
+                }
+              : notification
+          )
+        );
+      }
+
+      if (
+        activity.type === "task_assignment" ||
+        activity.type === "deadline_reminder"
+      ) {
+        navigate("/my-projects", {
+          state: {
+            taskId: activity.relatedId,
+          },
+        });
+        return;
+      }
+
+      if (
+        activity.type === "invitation" ||
+        activity.type === "team_update"
+      ) {
+        navigate("/team-management");
+        return;
+      }
+
+      if (activity.type === "project_update") {
+        navigate("/my-projects");
+        return;
+      }
+
+      if (activity.source === "reputation") {
+        navigate("/reputation");
+        return;
+      }
+
+      if (activity.actionUrl) {
+        navigate(activity.actionUrl);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error.message ||
+          "Unable to open this activity."
+      );
+    }
+  };
 
   const currentPhase = useMemo(() => {
     if (!roadmap?.phases?.length) {
@@ -748,38 +885,69 @@ export default function Dashboard() {
             </div>
 
             <div className="max-h-48 space-y-4 overflow-y-auto">
-              {recentActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-3"
-                >
-                  <div className="mt-1 rounded-lg bg-indigo-50 p-2 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300">
-                    <CheckCircle2 className="h-3 w-3" />
-                  </div>
+              {recentActivities.map((activity) => {
+                const ActivityIcon = getActivityIcon(
+                  activity.type
+                );
 
-                  <div className="min-w-0 flex-1 text-xs">
-                    <p className="capitalize text-slate-700 dark:text-slate-300">
-                      {activity.action}
-                    </p>
+                return (
+                  <button
+                    type="button"
+                    key={activity.id}
+                    onClick={() => handleActivityClick(activity)}
 
-                    <p className="mt-1 text-[10px] text-slate-400">
-                      {formatDate(activity.date)?.full ||
-                        "Recently"}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`text-xs font-bold ${
-                      activity.points >= 0
-                        ? "text-emerald-600"
-                        : "text-rose-600"
+                    className={`flex w-full items-start gap-3 rounded-xl p-2 text-left transition ${
+                      activity.actionUrl
+                        ? "hover:bg-slate-50 dark:hover:bg-slate-800"
+                        : ""
                     }`}
                   >
-                    {activity.points >= 0 ? "+" : ""}
-                    {activity.points}
-                  </span>
-                </div>
-              ))}
+                    <div
+                      className={`mt-1 rounded-lg p-2 ${
+                        !activity.isRead
+                          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                          : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      }`}
+                    >
+                      <ActivityIcon className="h-3.5 w-3.5" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
+                          {activity.title}
+                        </p>
+
+                        {!activity.isRead && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
+                        )}
+                      </div>
+
+                      <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">
+                        {activity.message}
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        {formatDate(activity.date)?.full ||
+                          "Recently"}
+                      </p>
+                    </div>
+
+                    {activity.points !== null && (
+                      <span
+                        className={`shrink-0 text-xs font-bold ${
+                          activity.points >= 0
+                            ? "text-emerald-600"
+                            : "text-rose-600"
+                        }`}
+                      >
+                        {activity.points >= 0 ? "+" : ""}
+                        {activity.points}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
 
               {recentActivities.length === 0 && (
                 <p className="py-4 text-center text-xs italic text-slate-400">
