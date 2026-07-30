@@ -7,6 +7,7 @@ import {
   Award,
   Settings,
   Bell,
+  Sparkles,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -32,6 +33,11 @@ const navigationItems = [
     path: "/ai-matching",
     icon: Users,
   },
+  {
+  label: "AI Project Suggestions",
+  path: "/ai-suggestions",
+  icon: Sparkles,
+ },
   {
     label: "My Projects",
     path: "/my-projects",
@@ -59,7 +65,11 @@ const navigationItems = [
   },
 ];
 
-function Sidebar({ isOpen, onClose }) {
+function Sidebar({
+  isOpen,
+  onClose,
+  currentUser,
+}) {
   const linkClassName = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
       isActive
@@ -67,9 +77,29 @@ function Sidebar({ isOpen, onClose }) {
         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
     }`;
 
+  const fullName =
+    currentUser?.full_name 
+      ?.split(" ")
+      .map(
+        (part) =>
+          part.charAt(0).toUpperCase()+
+        part.slice(1).toLowerCase()
+      )
+      .join(" ") || "Current User";
+
+  const email =
+    currentUser?.email || "View profile";
+
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase();
+
   return (
     <>
-      {/* Mobile background overlay */}
       {isOpen && (
         <button
           type="button"
@@ -81,11 +111,12 @@ function Sidebar({ isOpen, onClose }) {
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white p-6 transition-transform duration-300 dark:border-slate-800 dark:bg-slate-900 md:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
         }`}
       >
         <div className="flex min-h-0 flex-1 flex-col">
-          {/* Logo */}
           <div className="mb-8 flex items-start justify-between">
             <div>
               <h1 className="text-xl font-bold text-slate-800 dark:text-white">
@@ -107,7 +138,6 @@ function Sidebar({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto">
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -126,24 +156,23 @@ function Sidebar({ isOpen, onClose }) {
             })}
           </nav>
 
-          {/* Current user */}
-          <div className="mt-6 border-t border-slate-200 pt-4">
+          <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-800">
             <NavLink
               to="/profile"
               onClick={onClose}
               className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                U
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                {initials || "U"}
               </div>
 
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-800 dark:text-white">
-                  Current User
+                  {fullName}
                 </p>
 
                 <p className="truncate text-xs text-slate-400">
-                  View profile
+                  {email}
                 </p>
               </div>
             </NavLink>
