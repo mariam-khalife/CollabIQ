@@ -75,7 +75,6 @@ class TeamMember(Base):
 
     team: Mapped["Team"] = relationship(back_populates="members")
     invitation: Mapped["TeamInvitation"] = relationship(back_populates="member")
-    tasks: Mapped[list["Task"]] = relationship(back_populates="assignee")
 
 
 class MatchSuggestion(Base):
