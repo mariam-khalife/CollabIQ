@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import {
   Calendar,
@@ -8,6 +7,7 @@ import {
   Circle,
   Clock,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -31,9 +31,11 @@ import {
 import {
   addRoadmapPhase,
   createRoadmap,
+  deleteRoadmapPhase,
   getProjectRoadmap,
   getRoadmapProgress,
   updatePhaseStatus,
+  updateRoadmapPhase,
 } from "../services/roadmapService";
 
 import {
@@ -79,6 +81,7 @@ export default function Roadmap() {
 
   const [showPhaseModal, setShowPhaseModal] = useState(false);
   const [phaseForm, setPhaseForm] = useState(EMPTY_PHASE_FORM);
+  const [editingPhase, setEditingPhase] = useState(null);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
@@ -246,21 +249,37 @@ export default function Roadmap() {
   };
 
   const openPhaseModal = () => {
+    setEditingPhase(null);
     setPhaseForm(EMPTY_PHASE_FORM);
     setShowPhaseModal(true);
     clearMessages();
   };
 
+  const openEditPhaseModal = (phase) => {
+    setEditingPhase(phase);
+  
+    setPhaseForm({
+      phase_name: phase.phase_name || "",
+      target_date: phase.target_date || "",
+    });
+  
+    setShowPhaseModal(true);
+    clearMessages();
+  };
+
   const closePhaseModal = () => {
-    setShowPhaseModal(false);
+    setShowPhaseModal(false); 
+    setEditingPhase(null);
     setPhaseForm(EMPTY_PHASE_FORM);
   };
 
-  const handleCreatePhase = async (event) => {
+  const handleSavePhase = async (event) => {
     event.preventDefault();
 
     if (!project) {
-      setErrorMessage("A project is required before adding a phase.");
+      setErrorMessage(
+        "A project is required before adding a phase."
+      );
       return;
     }
 
@@ -273,36 +292,60 @@ export default function Roadmap() {
       setIsSubmitting(true);
       clearMessages();
 
-      if (!roadmap) {
-        await createRoadmap({
-          project_id: project.id,
-          generated_by: "manual",
-          phases: [
-            {
-              phase_name: phaseForm.phase_name.trim(),
-              phase_order: 1,
-              target_date: phaseForm.target_date || null,
-            },
-          ],
-        });
-      } else {
-        await addRoadmapPhase(roadmap.id, {
+      if (editingPhase) {
+        await updateRoadmapPhase(editingPhase.id, {
           phase_name: phaseForm.phase_name.trim(),
+          phase_order: editingPhase.phase_order,
           target_date: phaseForm.target_date || null,
         });
-      }
 
-      closePhaseModal();
-      await loadTeamData(activeTeam);
-      setMessage("Roadmap phase created successfully.");
-    } catch (error) {
-      setErrorMessage(
-        error.message || "Unable to create the roadmap phase."
+      setMessage("Roadmap phase updated successfully.");
+    } else if (!roadmap) {
+      await createRoadmap({
+        project_id: project.id,
+        generated_by: "manual",
+        phases: [
+          {
+            phase_name: phaseForm.phase_name.trim(),
+            phase_order: 1,
+            target_date: phaseForm.target_date || null,
+          },
+        ],
+      });
+
+      setMessage("Roadmap created successfully.");
+    } else {
+      const existingOrders = (roadmap.phases || []).map(
+        (phase) => Number(phase.phase_order) || 0
       );
-    } finally {
-      setIsSubmitting(false);
+
+      const nextPhaseOrder =
+        existingOrders.length > 0
+          ? Math.max(...existingOrders) + 1
+          : 1;
+
+      await addRoadmapPhase(roadmap.id, {
+        phase_name: phaseForm.phase_name.trim(),
+        phase_order: nextPhaseOrder,
+        target_date: phaseForm.target_date || null,
+      });
+
+      setMessage("Roadmap phase created successfully.");
     }
-  };
+
+    closePhaseModal();
+    await loadTeamData(activeTeam);
+  } catch (error) {
+    setErrorMessage(
+      error.message ||
+        `Unable to ${
+          editingPhase ? "update" : "create"
+        } the roadmap phase.`
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handlePhaseStatusChange = async (phaseId, status) => {
     try {
@@ -313,6 +356,29 @@ export default function Roadmap() {
     } catch (error) {
       setErrorMessage(
         error.message || "Unable to update the phase status."
+      );
+    }
+  };
+
+  const handleDeletePhase = async (phase) => {
+    const confirmed = window.confirm(
+      `Delete the phase "${phase.phase_name}" and all of its tasks?`
+    );
+  
+    if (!confirmed) {
+      return;
+    }
+  
+    try {
+      clearMessages();
+   
+      await deleteRoadmapPhase(phase.id);
+      await loadTeamData(activeTeam);
+
+      setMessage("Roadmap phase deleted successfully.");
+    } catch (error) {
+        setErrorMessage(
+        error.message || "Unable to delete the roadmap phase."
       );
     }
   };
@@ -630,12 +696,12 @@ export default function Roadmap() {
                   key={phase.id}
                   className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800"
                 >
-                  <button
-                    type="button"
-                    onClick={() => togglePhase(phase.id)}
-                    className="flex w-full items-center justify-between gap-4 p-5 text-left"
-                  >
-                    <div>
+                  <div className="flex w-full items-center justify-between gap-4 p-5">
+                    <button
+                      type="button"
+                      onClick={() => togglePhase(phase.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <div className="flex flex-wrap items-center gap-3">
                         <h3 className="font-bold text-slate-900 dark:text-white">
                           Phase {phase.phase_order}: {phase.phase_name}
@@ -652,41 +718,63 @@ export default function Roadmap() {
 
                         <span>
                           {phase.tasks.length}{" "}
-                          {phase.tasks.length === 1
-                            ? "task"
-                            : "tasks"}
+                          {phase.tasks.length === 1 ? "task" : "tasks"}
                         </span>
                       </div>
-                    </div>
+                    </button>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {isLeader && (
-                        <select
-                          value={phase.status}
-                          onClick={(event) =>
-                            event.stopPropagation()
-                          }
-                          onChange={(event) =>
-                            handlePhaseStatusChange(
-                              phase.id,
-                              event.target.value
-                            )
-                          }
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none dark:border-slate-700 dark:bg-slate-800"
-                        >
-                          <option value="todo">Not Started</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="done">Completed</option>
-                        </select>
+                        <>
+                          <select
+                            value={phase.status}
+                            onChange={(event) =>
+                              handlePhaseStatusChange(
+                                phase.id,
+                                event.target.value
+                              )
+                            }
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold outline-none dark:border-slate-700 dark:bg-slate-800"
+                          >
+                            <option value="todo">Not Started</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Completed</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => openEditPhaseModal(phase)}
+                            title="Edit phase"
+                            className="rounded-lg p-2 text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePhase(phase)}
+                            title="Delete phase"
+                            className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
                       )}
 
-                      {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-slate-500" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-slate-400" />
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => togglePhase(phase.id)}
+                        title={isExpanded ? "Collapse phase" : "Expand phase"}
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-5 w-5" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
-                  </button>
+                  </div>
 
                   {isExpanded && (
                     <div className="border-t border-slate-200 dark:border-slate-800">
@@ -801,12 +889,20 @@ export default function Roadmap() {
 
       {showPhaseModal && (
         <Modal
-          title="Add Roadmap Phase"
-          description="Create a new manual phase for this project roadmap."
+          title={
+            editingPhase
+              ? "Edit Roadmap Phase"
+              : "Add Roadmap Phase"
+          }
+          description={
+            editingPhase
+              ? "Update the phase name and target date."
+              : "Create a new manual phase for this project roadmap."
+          }
           onClose={closePhaseModal}
         >
           <form
-            onSubmit={handleCreatePhase}
+            onSubmit={handleSavePhase}
             className="space-y-5"
           >
             <FormField label="Phase name">
@@ -842,7 +938,9 @@ export default function Roadmap() {
             <ModalActions
               onCancel={closePhaseModal}
               isSubmitting={isSubmitting}
-              submitLabel="Create Phase"
+              submitLabel={
+                editingPhase ? "Save Changes" : "Create Phase"
+              }
             />
           </form>
         </Modal>

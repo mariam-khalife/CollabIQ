@@ -15,6 +15,28 @@ export const getRoadmapProgress = async (roadmapId) => {
   return apiRequest(`/roadmaps/${roadmapId}/progress`);
 };
 
+export const updateRoadmapPhase = async (
+  phaseId,
+  phaseData
+) => {
+  return apiRequest(
+    `/roadmaps/phases/${phaseId}`,
+    {
+      method: "PUT",
+      body: phaseData,
+    }
+  );
+};
+
+export const deleteRoadmapPhase = async (phaseId) => {
+  return apiRequest(
+    `/roadmaps/phases/${phaseId}`,
+    {
+      method: "DELETE",
+    }
+  );
+};
+
 export const updatePhaseStatus = async (
   phaseId,
   status

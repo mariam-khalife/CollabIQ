@@ -4,54 +4,123 @@ from sqlalchemy.orm import Session
 
 from app.models.project import Project
 from app.models.roadmap import Roadmap, RoadmapPhase
+from app.models.task import Task
 from app.models.team import Team
 from app.models.user import User
-from app.models.task import Task
-from app.schemas.roadmap import RoadmapCreate, RoadmapPhaseStatusUpdate
+from app.schemas.roadmap import (
+    RoadmapCreate,
+    RoadmapPhaseCreate,
+    RoadmapPhaseStatusUpdate,
+    RoadmapPhaseUpdate,
+)
 
+
+def get_roadmap_by_id(
+    db: Session,
+    roadmap_id: UUID,
+):
+    return (
+        db.query(Roadmap)
+        .filter(Roadmap.id == roadmap_id)
+        .first()
+    )
+
+
+def get_phase_by_id(
+    db: Session,
+    phase_id: UUID,
+):
+    return (
+        db.query(RoadmapPhase)
+        .filter(RoadmapPhase.id == phase_id)
+        .first()
+    )
+
+
+def check_roadmap_leader(
+    db: Session,
+    roadmap: Roadmap,
+    current_user: User,
+):
+    project = (
+        db.query(Project)
+        .filter(Project.id == roadmap.project_id)
+        .first()
+    )
+
+    if not project:
+        return "project_not_found"
+
+    team = (
+        db.query(Team)
+        .filter(Team.id == project.team_id)
+        .first()
+    )
+
+    if not team or team.leader_id != current_user.id:
+        return "not_leader"
+
+    return project
 
 
 def create_roadmap(
     db: Session,
     roadmap_data: RoadmapCreate,
-    current_user: User
+    current_user: User,
 ):
-    project = db.query(Project).filter(
-        Project.id == roadmap_data.project_id
-    ).first()
+    project = (
+        db.query(Project)
+        .filter(Project.id == roadmap_data.project_id)
+        .first()
+    )
 
     if not project:
         return "project_not_found"
 
-    team = db.query(Team).filter(
-        Team.id == project.team_id
-    ).first()
+    team = (
+        db.query(Team)
+        .filter(Team.id == project.team_id)
+        .first()
+    )
 
     if not team or team.leader_id != current_user.id:
         return "not_leader"
 
-    existing = db.query(Roadmap).filter(
-        Roadmap.project_id == roadmap_data.project_id
-    ).first()
+    existing = (
+        db.query(Roadmap)
+        .filter(
+            Roadmap.project_id
+            == roadmap_data.project_id
+        )
+        .first()
+    )
 
     if existing:
         return "roadmap_exists"
 
     roadmap = Roadmap(
         project_id=roadmap_data.project_id,
-        generated_by=roadmap_data.generated_by
+        generated_by="manual",
     )
 
     db.add(roadmap)
     db.flush()
 
+    used_orders = set()
+
     for phase_data in roadmap_data.phases:
+        if phase_data.phase_order in used_orders:
+            db.rollback()
+            return "duplicate_phase_order"
+
+        used_orders.add(phase_data.phase_order)
+
         phase = RoadmapPhase(
             roadmap_id=roadmap.id,
             phase_name=phase_data.phase_name,
             phase_order=phase_data.phase_order,
             target_date=phase_data.target_date,
-            status="todo"
+            status="todo",
         )
 
         db.add(phase)
@@ -62,66 +131,189 @@ def create_roadmap(
     return roadmap
 
 
-def get_roadmap_by_project(db: Session, project_id: UUID):
-    roadmap = db.query(Roadmap).filter(
-        Roadmap.project_id == project_id
-    ).first()
+def get_roadmap_by_project(
+    db: Session,
+    project_id: UUID,
+):
+    roadmap = (
+        db.query(Roadmap)
+        .filter(Roadmap.project_id == project_id)
+        .first()
+    )
 
     if not roadmap:
         return None
 
-    phases = db.query(RoadmapPhase).filter(
-        RoadmapPhase.roadmap_id == roadmap.id
-    ).order_by(RoadmapPhase.phase_order).all()
+    phases = (
+        db.query(RoadmapPhase)
+        .filter(RoadmapPhase.roadmap_id == roadmap.id)
+        .order_by(RoadmapPhase.phase_order)
+        .all()
+    )
 
     return {
         "id": roadmap.id,
         "project_id": roadmap.project_id,
         "generated_by": roadmap.generated_by,
         "created_at": roadmap.created_at,
-        "phases": phases
+        "phases": phases,
     }
 
-def get_phase_by_id(
+
+def add_phase_to_roadmap(
     db: Session,
-    phase_id: UUID
+    roadmap_id: UUID,
+    phase_data: RoadmapPhaseCreate,
+    current_user: User,
 ):
-    return db.query(RoadmapPhase).filter(
-        RoadmapPhase.id == phase_id
-    ).first()
+    roadmap = get_roadmap_by_id(
+        db,
+        roadmap_id,
+    )
+
+    if not roadmap:
+        return "roadmap_not_found"
+
+    permission_result = check_roadmap_leader(
+        db,
+        roadmap,
+        current_user,
+    )
+
+    if permission_result in {
+        "project_not_found",
+        "not_leader",
+    }:
+        return permission_result
+
+    duplicate_order = (
+        db.query(RoadmapPhase)
+        .filter(
+            RoadmapPhase.roadmap_id == roadmap_id,
+            RoadmapPhase.phase_order
+            == phase_data.phase_order,
+        )
+        .first()
+    )
+
+    if duplicate_order:
+        return "duplicate_phase_order"
+
+    phase = RoadmapPhase(
+        roadmap_id=roadmap_id,
+        phase_name=phase_data.phase_name,
+        phase_order=phase_data.phase_order,
+        target_date=phase_data.target_date,
+        status="todo",
+    )
+
+    db.add(phase)
+    db.commit()
+    db.refresh(phase)
+
+    return phase
+
+
+def update_phase(
+    db: Session,
+    phase_id: UUID,
+    phase_data: RoadmapPhaseUpdate,
+    current_user: User,
+):
+    phase = get_phase_by_id(
+        db,
+        phase_id,
+    )
+
+    if not phase:
+        return "phase_not_found"
+
+    roadmap = get_roadmap_by_id(
+        db,
+        phase.roadmap_id,
+    )
+
+    if not roadmap:
+        return "roadmap_not_found"
+
+    permission_result = check_roadmap_leader(
+        db,
+        roadmap,
+        current_user,
+    )
+
+    if permission_result in {
+        "project_not_found",
+        "not_leader",
+    }:
+        return permission_result
+
+    update_data = phase_data.model_dump(
+        exclude_unset=True
+    )
+
+    if "phase_order" in update_data:
+        duplicate_order = (
+            db.query(RoadmapPhase)
+            .filter(
+                RoadmapPhase.roadmap_id
+                == phase.roadmap_id,
+                RoadmapPhase.phase_order
+                == update_data["phase_order"],
+                RoadmapPhase.id != phase.id,
+            )
+            .first()
+        )
+
+        if duplicate_order:
+            return "duplicate_phase_order"
+
+    for field_name, field_value in update_data.items():
+        setattr(
+            phase,
+            field_name,
+            field_value,
+        )
+
+    db.commit()
+    db.refresh(phase)
+
+    return phase
 
 
 def update_phase_status(
     db: Session,
     phase_id: UUID,
     phase_data: RoadmapPhaseStatusUpdate,
-    current_user: User
+    current_user: User,
 ):
-    phase = get_phase_by_id(db, phase_id)
+    phase = get_phase_by_id(
+        db,
+        phase_id,
+    )
 
     if not phase:
         return "phase_not_found"
 
-    roadmap = db.query(Roadmap).filter(
-        Roadmap.id == phase.roadmap_id
-    ).first()
+    roadmap = get_roadmap_by_id(
+        db,
+        phase.roadmap_id,
+    )
 
     if not roadmap:
         return "roadmap_not_found"
 
-    project = db.query(Project).filter(
-        Project.id == roadmap.project_id
-    ).first()
+    permission_result = check_roadmap_leader(
+        db,
+        roadmap,
+        current_user,
+    )
 
-    if not project:
-        return "project_not_found"
-
-    team = db.query(Team).filter(
-        Team.id == project.team_id
-    ).first()
-
-    if not team or team.leader_id != current_user.id:
-        return "not_leader"
+    if permission_result in {
+        "project_not_found",
+        "not_leader",
+    }:
+        return permission_result
 
     phase.status = phase_data.status
 
@@ -130,20 +322,72 @@ def update_phase_status(
 
     return phase
 
+
+def delete_phase(
+    db: Session,
+    phase_id: UUID,
+    current_user: User,
+):
+    phase = get_phase_by_id(
+        db,
+        phase_id,
+    )
+
+    if not phase:
+        return "phase_not_found"
+
+    roadmap = get_roadmap_by_id(
+        db,
+        phase.roadmap_id,
+    )
+
+    if not roadmap:
+        return "roadmap_not_found"
+
+    permission_result = check_roadmap_leader(
+        db,
+        roadmap,
+        current_user,
+    )
+
+    if permission_result in {
+        "project_not_found",
+        "not_leader",
+    }:
+        return permission_result
+
+    db.query(Task).filter(
+        Task.phase_id == phase.id
+    ).delete(
+        synchronize_session=False
+    )
+
+    db.delete(phase)
+    db.commit()
+
+    return "deleted"
+
+
 def calculate_roadmap_progress(
     db: Session,
-    roadmap_id: UUID
+    roadmap_id: UUID,
 ):
-    roadmap = db.query(Roadmap).filter(
-        Roadmap.id == roadmap_id
-    ).first()
+    roadmap = get_roadmap_by_id(
+        db,
+        roadmap_id,
+    )
 
     if not roadmap:
         return None
 
-    phases = db.query(RoadmapPhase).filter(
-        RoadmapPhase.roadmap_id == roadmap.id
-    ).all()
+    phases = (
+        db.query(RoadmapPhase)
+        .filter(
+            RoadmapPhase.roadmap_id
+            == roadmap.id
+        )
+        .all()
+    )
 
     total_phases = len(phases)
 
@@ -161,9 +405,11 @@ def calculate_roadmap_progress(
     tasks = []
 
     if phase_ids:
-        tasks = db.query(Task).filter(
-            Task.phase_id.in_(phase_ids)
-        ).all()
+        tasks = (
+            db.query(Task)
+            .filter(Task.phase_id.in_(phase_ids))
+            .all()
+        )
 
     total_tasks = len(tasks)
 
@@ -175,13 +421,17 @@ def calculate_roadmap_progress(
 
     if total_tasks > 0:
         progress_percentage = round(
-            completed_tasks / total_tasks * 100,
-            2
+            completed_tasks
+            / total_tasks
+            * 100,
+            2,
         )
     elif total_phases > 0:
         progress_percentage = round(
-            completed_phases / total_phases * 100,
-            2
+            completed_phases
+            / total_phases
+            * 100,
+            2,
         )
     else:
         progress_percentage = 0.0
