@@ -20,7 +20,7 @@ services:
       # JWT signing secret - Render generates a strong random value.
       - key: SECRET_KEY
         generateValue: true
-      # Google Gemini API key (rotate the previously-exposed one first).
+      # Google Gemini API key.
       - key: LLM_API_KEY
         sync: false
       # Deployed frontend origin, e.g. https://collabiq.vercel.app

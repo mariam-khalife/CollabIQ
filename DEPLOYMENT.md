@@ -38,7 +38,7 @@ build runs `alembic upgrade head`).
    `render.yaml` and proposes a service called **collabiq-api**.
 3. When prompted, fill in the environment variables:
    - `DATABASE_URL` → the Neon string from step 1.
-   - `LLM_API_KEY` → your **new** Google Gemini key (rotate the old one first).
+   - `LLM_API_KEY` → the Google Gemini API key.
    - `FRONTEND_ORIGINS` → leave blank for now; set it after step 3 to your
      Vercel URL (e.g. `https://collabiq.vercel.app`).
    - `SECRET_KEY` → generated automatically, nothing to do.
