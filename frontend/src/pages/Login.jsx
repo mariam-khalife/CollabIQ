@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FaEnvelope,
@@ -10,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 
+import { apiRequest, setAccessToken } from "../services/api";
 import "../styles/auth.css";
 
 function Login() {
@@ -44,59 +44,26 @@ function Login() {
     try {
       setIsSubmitting(true);
 
-      const response = await axios.post(
-        "http://127.0.0.1:8000/auth/login",
-        loginData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiRequest("/auth/login", {
+        method: "POST",
+        body: loginData,
+        requiresAuth: false,
+      });
 
-      const accessToken = response.data.access_token;
+      const accessToken = response.access_token;
 
       if (!accessToken) {
         throw new Error("The backend did not return an access token.");
       }
 
-      if (rememberMe) {
-        localStorage.setItem("access_token", accessToken);
-        sessionStorage.removeItem("access_token");
-      } else {
-        sessionStorage.setItem("access_token", accessToken);
-        localStorage.removeItem("access_token");
-      }
+      setAccessToken(accessToken, rememberMe);
 
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
 
-      if (!error.response) {
-        alert(
-          "Unable to connect to the backend. Make sure the backend server is running."
-        );
-        return;
-      }
-
-      const detail = error.response.data?.detail;
-
-      if (Array.isArray(detail)) {
-        const validationMessages = detail
-          .map((item) => {
-            const field = item.loc?.at(-1) || "field";
-            return `${field}: ${item.msg}`;
-          })
-          .join("\n");
-
-        alert(validationMessages);
-        return;
-      }
-
       alert(
-        typeof detail === "string"
-          ? detail
-          : "Login failed. Please check your email and password."
+        error.message || "Login failed. Please check your email and password."
       );
     } finally {
       setIsSubmitting(false);

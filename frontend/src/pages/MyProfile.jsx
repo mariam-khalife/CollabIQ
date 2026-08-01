@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import {
   Award,
   Briefcase,
@@ -13,14 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://127.0.0.1:8000";
-
-function getStoredToken() {
-  return (
-    localStorage.getItem("access_token") ||
-    sessionStorage.getItem("access_token")
-  );
-}
+import { apiRequest, getAccessToken, removeAccessToken } from "../services/api";
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -46,7 +38,7 @@ function MyProfile() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const token = getStoredToken();
+      const token = getAccessToken();
 
       if (!token) {
         setIsLoading(false);
@@ -58,34 +50,26 @@ function MyProfile() {
         setIsLoading(true);
         setErrorMessage("");
 
-        const response = await axios.get(`${API_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await apiRequest("/auth/me");
 
         setProfileData({
-          full_name: response.data.full_name || "",
-          email: response.data.email || "",
-          university: response.data.university || "",
-          bio: response.data.bio || "",
-          availability: response.data.availability || "",
-          experience_level: response.data.experience_level || "",
+          full_name: response.full_name || "",
+          email: response.email || "",
+          university: response.university || "",
+          bio: response.bio || "",
+          availability: response.availability || "",
+          experience_level: response.experience_level || "",
         });
       } catch (error) {
         console.error("Profile loading error:", error);
 
-        if (error.response?.status === 401) {
-          localStorage.removeItem("access_token");
-          sessionStorage.removeItem("access_token");
+        if (error.status === 401) {
+          removeAccessToken();
           navigate("/login");
           return;
         }
 
-        setErrorMessage(
-          error.response?.data?.detail ||
-            "Unable to load your profile."
-        );
+        setErrorMessage(error.message || "Unable to load your profile.");
       } finally {
         setIsLoading(false);
       }
@@ -168,7 +152,7 @@ function MyProfile() {
   };
 
   const handleSaveChanges = async () => {
-    const token = getStoredToken();
+    const token = getAccessToken();
 
     if (!token) {
       navigate("/login");
@@ -194,40 +178,27 @@ function MyProfile() {
       setIsSaving(true);
       setErrorMessage("");
 
-      const response = await axios.put(
-        `${API_URL}/users/me`,
-        updateData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiRequest("/users/me", {
+        method: "PUT",
+        body: updateData,
+      });
 
       setProfileData((previousProfile) => ({
         ...previousProfile,
-        ...response.data,
+        ...response,
       }));
 
       alert("Profile updated successfully.");
     } catch (error) {
       console.error("Profile update error:", error);
 
-      if (error.response?.status === 401) {
-        localStorage.removeItem("access_token");
-        sessionStorage.removeItem("access_token");
+      if (error.status === 401) {
+        removeAccessToken();
         navigate("/login");
         return;
       }
 
-      const detail = error.response?.data?.detail;
-
-      setErrorMessage(
-        typeof detail === "string"
-          ? detail
-          : "Unable to update your profile."
-      );
+      setErrorMessage(error.message || "Unable to update your profile.");
     } finally {
       setIsSaving(false);
     }

@@ -1,0 +1,28 @@
+# Render Blueprint for the CollabIQ FastAPI backend.
+# Create the database on Neon first, then set DATABASE_URL / LLM_API_KEY /
+# FRONTEND_ORIGINS in the Render dashboard (they are marked sync:false below).
+services:
+  - type: web
+    name: collabiq-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      pip install -r ../database/requirements.txt &&
+      (cd ../database && alembic upgrade head)
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Neon connection string, e.g.
+      # postgresql+psycopg2://USER:PASSWORD@HOST/DB?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # JWT signing secret - Render generates a strong random value.
+      - key: SECRET_KEY
+        generateValue: true
+      # Google Gemini API key.
+      - key: LLM_API_KEY
+        sync: false
+      # Deployed frontend origin, e.g. https://collabiq.vercel.app
+      - key: FRONTEND_ORIGINS
+        sync: false
