@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import {
@@ -12,6 +11,7 @@ import {
   FaGraduationCap,
 } from "react-icons/fa";
 
+import { apiRequest } from "../services/api";
 import "../styles/auth.css";
 
 function Register() {
@@ -83,17 +83,13 @@ function Register() {
     try {
       setIsSubmitting(true);
 
-      const response = await axios.post(
-        "http://127.0.0.1:8000/auth/register",
-        registrationData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await apiRequest("/auth/register", {
+        method: "POST",
+        body: registrationData,
+        requiresAuth: false,
+      });
 
-      console.log("Registration successful:", response.data);
+      console.log("Registration successful:", response);
 
       alert("Account created successfully.");
 
@@ -101,33 +97,9 @@ function Register() {
     } catch (error) {
       console.error("Registration error:", error);
 
-      if (!error.response) {
-        alert(
-          "Unable to connect to the backend. Make sure the backend server is running."
-        );
-        return;
-      }
-
-      const detail = error.response.data?.detail;
-
-      if (Array.isArray(detail)) {
-        const validationMessages = detail
-          .map((item) => {
-            const field = item.loc?.at(-1) || "field";
-            return `${field}: ${item.msg}`;
-          })
-          .join("\n");
-
-        alert(validationMessages);
-        return;
-      }
-
-      if (typeof detail === "string") {
-        alert(detail);
-        return;
-      }
-
-      alert("Registration failed. Please verify your information.");
+      alert(
+        error.message || "Registration failed. Please verify your information."
+      );
     } finally {
       setIsSubmitting(false);
     }
