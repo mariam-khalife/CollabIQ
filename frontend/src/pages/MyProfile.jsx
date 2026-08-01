@@ -563,17 +563,11 @@ function MyProfile() {
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <option value="">Select availability</option>
-                  <option value="1-5 hours/week">
-                    1–5 hours per week
+                  <option value="part_time">
+                    Part-time — up to 10 hours per week
                   </option>
-                  <option value="6-10 hours/week">
-                    6–10 hours per week
-                  </option>
-                  <option value="11-20 hours/week">
-                    11–20 hours per week
-                  </option>
-                  <option value="20+ hours/week">
-                    More than 20 hours per week
+                  <option value="full_time">
+                    Full-time — more than 10 hours per week
                   </option>
                 </select>
               </div>
