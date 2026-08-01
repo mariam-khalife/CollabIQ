@@ -58,8 +58,6 @@ function Login() {
 
       setAccessToken(accessToken, rememberMe);
 
-      alert("Login successful.");
-
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
