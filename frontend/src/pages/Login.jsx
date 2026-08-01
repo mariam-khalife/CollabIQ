@@ -68,8 +68,6 @@ function Login() {
         localStorage.removeItem("access_token");
       }
 
-      alert("Login successful.");
-
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
