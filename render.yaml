@@ -1,4 +1,4 @@
-# Render Blueprint for the CollabIQ FastAPI backend.
+# Render Blueprint for CollabIQ: the FastAPI backend and the static frontend.
 # Create the database on Neon first, then set DATABASE_URL / LLM_API_KEY /
 # FRONTEND_ORIGINS in the Render dashboard (they are marked sync:false below).
 services:
@@ -23,6 +23,26 @@ services:
       # Google Gemini API key.
       - key: LLM_API_KEY
         sync: false
-      # Deployed frontend origin, e.g. https://collabiq.vercel.app
+      # Deployed frontend origin, e.g. https://collabiq-web.onrender.com
+      # (comma-separated if there is more than one).
       - key: FRONTEND_ORIGINS
+        sync: false
+
+  # Static Vite + React SPA. Free on Render and served from its CDN.
+  - type: web
+    name: collabiq-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    # Single-page app: serve index.html for any path so client-side routes
+    # survive a refresh or a direct link.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Vite inlines this at build time, so the bundle talks to the deployed
+      # backend instead of the localhost fallback in src/services/api.js.
+      - key: VITE_API_BASE_URL
         sync: false
