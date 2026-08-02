@@ -13,6 +13,18 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { apiRequest, getAccessToken, removeAccessToken } from "../services/api";
+import {
+  addUserSkill,
+  getSkillCatalog,
+  getUserSkills,
+  removeUserSkill,
+} from "../services/skillService";
+import {
+  addUserInterest,
+  getInterestCatalog,
+  getUserInterests,
+  removeUserInterest,
+} from "../services/interestService";
 
 function MyProfile() {
   const navigate = useNavigate();
@@ -26,10 +38,21 @@ function MyProfile() {
     experience_level: "",
   });
 
+  const [userId, setUserId] = useState(null);
+
+  // Skills are { skill_id, name, proficiency_level }; interests are
+  // { interest_id, name }. The "saved" copies mirror what the server has, so
+  // saving can send only what actually changed.
   const [skills, setSkills] = useState([]);
   const [interests, setInterests] = useState([]);
+  const [savedSkills, setSavedSkills] = useState([]);
+  const [savedInterests, setSavedInterests] = useState([]);
+
+  const [skillCatalog, setSkillCatalog] = useState([]);
+  const [interestCatalog, setInterestCatalog] = useState([]);
 
   const [newSkill, setNewSkill] = useState("");
+  const [newSkillLevel, setNewSkillLevel] = useState("intermediate");
   const [newInterest, setNewInterest] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +83,41 @@ function MyProfile() {
           availability: response.availability || "",
           experience_level: response.experience_level || "",
         });
+
+        setUserId(response.id);
+
+        const [
+          catalogSkills,
+          catalogInterests,
+          currentSkills,
+          currentInterests,
+        ] = await Promise.all([
+          getSkillCatalog(),
+          getInterestCatalog(),
+          getUserSkills(response.id),
+          getUserInterests(response.id),
+        ]);
+
+        setSkillCatalog(catalogSkills);
+        setInterestCatalog(catalogInterests);
+
+        const loadedSkills = currentSkills.map((userSkill) => ({
+          skill_id: userSkill.skill_id,
+          name: userSkill.skill_name,
+          proficiency_level: userSkill.proficiency_level,
+        }));
+
+        const loadedInterests = currentInterests.map(
+          (userInterest) => ({
+            interest_id: userInterest.interest_id,
+            name: userInterest.interest_name,
+          })
+        );
+
+        setSkills(loadedSkills);
+        setSavedSkills(loadedSkills);
+        setInterests(loadedInterests);
+        setSavedInterests(loadedInterests);
       } catch (error) {
         console.error("Profile loading error:", error);
 
@@ -87,6 +145,14 @@ function MyProfile() {
     }));
   };
 
+  // Skills and interests are linked by id, so a typed name has to resolve to
+  // a catalogue entry before it can be added.
+  const findInCatalog = (catalog, name) =>
+    catalog.find(
+      (entry) =>
+        entry.name.toLowerCase() === name.trim().toLowerCase()
+    );
+
   const handleAddSkill = () => {
     const trimmedSkill = newSkill.trim();
 
@@ -94,9 +160,17 @@ function MyProfile() {
       return;
     }
 
+    const match = findInCatalog(skillCatalog, trimmedSkill);
+
+    if (!match) {
+      setErrorMessage(
+        `"${trimmedSkill}" is not in the skill list. Pick one of the suggestions.`
+      );
+      return;
+    }
+
     const alreadyExists = skills.some(
-      (skill) =>
-        skill.toLowerCase() === trimmedSkill.toLowerCase()
+      (skill) => skill.skill_id === match.id
     );
 
     if (alreadyExists) {
@@ -104,17 +178,25 @@ function MyProfile() {
       return;
     }
 
+    setErrorMessage("");
+
     setSkills((previousSkills) => [
       ...previousSkills,
-      trimmedSkill,
+      {
+        skill_id: match.id,
+        name: match.name,
+        proficiency_level: newSkillLevel,
+      },
     ]);
 
     setNewSkill("");
   };
 
-  const handleRemoveSkill = (skillToRemove) => {
+  const handleRemoveSkill = (skillId) => {
     setSkills((previousSkills) =>
-      previousSkills.filter((skill) => skill !== skillToRemove)
+      previousSkills.filter(
+        (skill) => skill.skill_id !== skillId
+      )
     );
   };
 
@@ -125,9 +207,20 @@ function MyProfile() {
       return;
     }
 
+    const match = findInCatalog(
+      interestCatalog,
+      trimmedInterest
+    );
+
+    if (!match) {
+      setErrorMessage(
+        `"${trimmedInterest}" is not in the interest list. Pick one of the suggestions.`
+      );
+      return;
+    }
+
     const alreadyExists = interests.some(
-      (interest) =>
-        interest.toLowerCase() === trimmedInterest.toLowerCase()
+      (interest) => interest.interest_id === match.id
     );
 
     if (alreadyExists) {
@@ -135,18 +228,20 @@ function MyProfile() {
       return;
     }
 
+    setErrorMessage("");
+
     setInterests((previousInterests) => [
       ...previousInterests,
-      trimmedInterest,
+      { interest_id: match.id, name: match.name },
     ]);
 
     setNewInterest("");
   };
 
-  const handleRemoveInterest = (interestToRemove) => {
+  const handleRemoveInterest = (interestId) => {
     setInterests((previousInterests) =>
       previousInterests.filter(
-        (interest) => interest !== interestToRemove
+        (interest) => interest.interest_id !== interestId
       )
     );
   };
@@ -187,6 +282,57 @@ function MyProfile() {
         ...previousProfile,
         ...response,
       }));
+
+      // Skills and interests live on their own endpoints, so persist just
+      // the difference against what the server already had.
+      const addedSkills = skills.filter(
+        (skill) =>
+          !savedSkills.some(
+            (saved) => saved.skill_id === skill.skill_id
+          )
+      );
+      const removedSkills = savedSkills.filter(
+        (saved) =>
+          !skills.some(
+            (skill) => skill.skill_id === saved.skill_id
+          )
+      );
+      const addedInterests = interests.filter(
+        (interest) =>
+          !savedInterests.some(
+            (saved) =>
+              saved.interest_id === interest.interest_id
+          )
+      );
+      const removedInterests = savedInterests.filter(
+        (saved) =>
+          !interests.some(
+            (interest) =>
+              interest.interest_id === saved.interest_id
+          )
+      );
+
+      await Promise.all([
+        ...addedSkills.map((skill) =>
+          addUserSkill(
+            userId,
+            skill.skill_id,
+            skill.proficiency_level
+          )
+        ),
+        ...removedSkills.map((skill) =>
+          removeUserSkill(userId, skill.skill_id)
+        ),
+        ...addedInterests.map((interest) =>
+          addUserInterest(userId, interest.interest_id)
+        ),
+        ...removedInterests.map((interest) =>
+          removeUserInterest(userId, interest.interest_id)
+        ),
+      ]);
+
+      setSavedSkills(skills);
+      setSavedInterests(interests);
 
       alert("Profile updated successfully.");
     } catch (error) {
@@ -355,6 +501,7 @@ function MyProfile() {
               <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
+                  list="skill-catalog"
                   value={newSkill}
                   onChange={(event) =>
                     setNewSkill(event.target.value)
@@ -369,6 +516,38 @@ function MyProfile() {
                   className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 />
 
+                <datalist id="skill-catalog">
+                  {skillCatalog
+                    .filter(
+                      (entry) =>
+                        !skills.some(
+                          (skill) =>
+                            skill.skill_id === entry.id
+                        )
+                    )
+                    .map((entry) => (
+                      <option
+                        key={entry.id}
+                        value={entry.name}
+                      />
+                    ))}
+                </datalist>
+
+                <select
+                  value={newSkillLevel}
+                  onChange={(event) =>
+                    setNewSkillLevel(event.target.value)
+                  }
+                  aria-label="Proficiency level"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">
+                    Intermediate
+                  </option>
+                  <option value="advanced">Advanced</option>
+                </select>
+
                 <button
                   type="button"
                   onClick={handleAddSkill}
@@ -382,15 +561,21 @@ function MyProfile() {
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => (
                   <span
-                    key={skill}
+                    key={skill.skill_id}
                     className="flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
                   >
-                    {skill}
+                    {skill.name}
+
+                    <span className="font-normal text-indigo-500 dark:text-indigo-400">
+                      {skill.proficiency_level}
+                    </span>
 
                     <button
                       type="button"
-                      onClick={() => handleRemoveSkill(skill)}
-                      aria-label={`Remove ${skill}`}
+                      onClick={() =>
+                        handleRemoveSkill(skill.skill_id)
+                      }
+                      aria-label={`Remove ${skill.name}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -414,6 +599,7 @@ function MyProfile() {
               <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
+                  list="interest-catalog"
                   value={newInterest}
                   onChange={(event) =>
                     setNewInterest(event.target.value)
@@ -428,6 +614,23 @@ function MyProfile() {
                   className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 />
 
+                <datalist id="interest-catalog">
+                  {interestCatalog
+                    .filter(
+                      (entry) =>
+                        !interests.some(
+                          (interest) =>
+                            interest.interest_id === entry.id
+                        )
+                    )
+                    .map((entry) => (
+                      <option
+                        key={entry.id}
+                        value={entry.name}
+                      />
+                    ))}
+                </datalist>
+
                 <button
                   type="button"
                   onClick={handleAddInterest}
@@ -441,17 +644,19 @@ function MyProfile() {
               <div className="flex flex-wrap gap-2">
                 {interests.map((interest) => (
                   <span
-                    key={interest}
+                    key={interest.interest_id}
                     className="flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white dark:bg-indigo-500"
                   >
-                    {interest}
+                    {interest.name}
 
                     <button
                       type="button"
                       onClick={() =>
-                        handleRemoveInterest(interest)
+                        handleRemoveInterest(
+                          interest.interest_id
+                        )
                       }
-                      aria-label={`Remove ${interest}`}
+                      aria-label={`Remove ${interest.name}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
