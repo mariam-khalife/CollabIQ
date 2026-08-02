@@ -13,6 +13,7 @@ only, never reuse it for real accounts.
 
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -22,7 +23,17 @@ from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from models import Interest, Role, Skill, Team, User, UserInterest, UserSkill  # noqa: E402
+from models import (  # noqa: E402
+    Interest,
+    Role,
+    Skill,
+    Team,
+    TeamInvitation,
+    TeamMember,
+    User,
+    UserInterest,
+    UserSkill,
+)
 
 # Same hashing scheme as backend/app/core/security.py, so sample accounts can
 # actually log in through the real /auth/login endpoint.
@@ -91,6 +102,18 @@ USERS = [
 
 DEMO_TEAM = ("Demo Team", "maya@example.com")
 
+# Sample users added to the Demo Team as accepted members: (email, role).
+# Maya leads the team (tracked via Team.leader_id) and is intentionally not a
+# team_members row, mirroring how create_team / accept_invitation behave.
+DEMO_TEAM_MEMBERS = [
+    ("omar@example.com", "Frontend Developer"),
+    ("rita@example.com", "Backend Developer"),
+    ("karim@example.com", "Backend Developer"),
+    ("lina@example.com", "Database Engineer"),
+    ("nour@example.com", "UI/UX Designer"),
+    ("tarek@example.com", "QA Engineer"),
+]
+
 
 def get_or_create(db, model, defaults=None, **lookup):
     row = db.query(model).filter_by(**lookup).first()
@@ -103,10 +126,12 @@ def get_or_create(db, model, defaults=None, **lookup):
 
 
 def seed(db: Session) -> None:
-    created = {"roles": 0, "skills": 0, "interests": 0, "users": 0, "teams": 0}
+    created = {"roles": 0, "skills": 0, "interests": 0, "users": 0, "teams": 0, "members": 0}
 
+    roles_by_name = {}
     for role_name, description in ROLES:
-        _, was_created = get_or_create(db, Role, role_name=role_name, defaults={"description": description})
+        role, was_created = get_or_create(db, Role, role_name=role_name, defaults={"description": description})
+        roles_by_name[role_name] = role
         created["roles"] += was_created
 
     skills_by_name = {}
@@ -151,8 +176,47 @@ def seed(db: Session) -> None:
             get_or_create(db, UserInterest, user_id=user.id, interest_id=interests_by_name[interest_name].id)
 
     team_name, leader_email = DEMO_TEAM
-    _, was_created = get_or_create(db, Team, team_name=team_name, leader_id=users_by_email[leader_email].id)
+    leader = users_by_email[leader_email]
+    team, was_created = get_or_create(db, Team, team_name=team_name, leader_id=leader.id)
     created["teams"] += was_created
+
+    # Attach sample members to the Demo Team. A team_members row must reference an
+    # accepted invitation (invitation_id is NOT NULL), so we create the invitation
+    # the same way the real accept_invitation flow does. Idempotent: a user who is
+    # already a member is skipped, so re-running never duplicates rows.
+    for member_email, role_name in DEMO_TEAM_MEMBERS:
+        member_user = users_by_email[member_email]
+        role = roles_by_name[role_name]
+
+        already_member = (
+            db.query(TeamMember)
+            .filter(TeamMember.team_id == team.id, TeamMember.user_id == member_user.id)
+            .first()
+        )
+        if already_member is not None:
+            continue
+
+        invitation = TeamInvitation(
+            team_id=team.id,
+            invited_user_id=member_user.id,
+            invited_by=leader.id,
+            proposed_role_id=role.id,
+            status="accepted",
+            responded_at=datetime.now(timezone.utc),
+        )
+        db.add(invitation)
+        db.flush()
+
+        db.add(
+            TeamMember(
+                team_id=team.id,
+                user_id=member_user.id,
+                role_id=role.id,
+                invitation_id=invitation.id,
+                has_committed=True,
+            )
+        )
+        created["members"] += 1
 
     db.commit()
     print("Seed complete:")
