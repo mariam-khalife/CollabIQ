@@ -6,10 +6,15 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.routers.users import get_current_user
-from app.schemas.skill import UserSkillCreate, UserSkillResponse
+from app.schemas.skill import (
+    SkillResponse,
+    UserSkillCreate,
+    UserSkillResponse,
+)
 from app.services.skill_service import (
     add_user_skill,
     get_user_skills,
+    list_skills,
     remove_user_skill,
 )
 
@@ -17,6 +22,18 @@ router = APIRouter(
     prefix="/users",
     tags=["Skills"]
 )
+
+# The catalogue is a separate resource from a user's own skills, so it gets
+# its own prefix rather than hanging off /users.
+catalog_router = APIRouter(
+    prefix="/skills",
+    tags=["Skills"]
+)
+
+
+@catalog_router.get("/", response_model=list[SkillResponse])
+def list_skill_catalog(db: Session = Depends(get_db)):
+    return list_skills(db)
 
 
 @router.get("/{user_id}/skills", response_model=list[UserSkillResponse])

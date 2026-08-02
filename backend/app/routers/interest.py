@@ -6,10 +6,15 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.routers.users import get_current_user
-from app.schemas.interest import UserInterestCreate, UserInterestResponse
+from app.schemas.interest import (
+    InterestResponse,
+    UserInterestCreate,
+    UserInterestResponse,
+)
 from app.services.interest_service import (
     add_user_interest,
     get_user_interests,
+    list_interests,
     remove_user_interest,
 )
 
@@ -17,6 +22,18 @@ router = APIRouter(
     prefix="/users",
     tags=["Interests"]
 )
+
+# The catalogue is a separate resource from a user's own interests, so it
+# gets its own prefix rather than hanging off /users.
+catalog_router = APIRouter(
+    prefix="/interests",
+    tags=["Interests"]
+)
+
+
+@catalog_router.get("/", response_model=list[InterestResponse])
+def list_interest_catalog(db: Session = Depends(get_db)):
+    return list_interests(db)
 
 
 @router.get(
