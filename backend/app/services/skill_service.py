@@ -6,10 +6,33 @@ from app.models.skill import Skill, UserSkill
 from app.schemas.skill import UserSkillCreate
 
 
+def list_skills(db: Session):
+    """The shared skill catalogue users pick from."""
+    return db.query(Skill).order_by(Skill.name).all()
+
+
 def get_user_skills(db: Session, user_id: UUID):
-    return db.query(UserSkill).filter(
-        UserSkill.user_id == user_id
-    ).all()
+    # Joined to the catalogue so the response carries the skill name, which
+    # is what clients actually display.
+    rows = (
+        db.query(UserSkill, Skill.name, Skill.category)
+        .join(Skill, Skill.id == UserSkill.skill_id)
+        .filter(UserSkill.user_id == user_id)
+        .order_by(Skill.name)
+        .all()
+    )
+
+    return [
+        {
+            "id": user_skill.id,
+            "user_id": user_skill.user_id,
+            "skill_id": user_skill.skill_id,
+            "proficiency_level": user_skill.proficiency_level,
+            "skill_name": name,
+            "category": category,
+        }
+        for user_skill, name, category in rows
+    ]
 
 
 def add_user_skill(

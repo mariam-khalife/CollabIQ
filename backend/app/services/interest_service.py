@@ -6,10 +6,31 @@ from app.models.interest import Interest, UserInterest
 from app.schemas.interest import UserInterestCreate
 
 
+def list_interests(db: Session):
+    """The shared interest catalogue users pick from."""
+    return db.query(Interest).order_by(Interest.name).all()
+
+
 def get_user_interests(db: Session, user_id: UUID):
-    return db.query(UserInterest).filter(
-        UserInterest.user_id == user_id
-    ).all()
+    # Joined to the catalogue so the response carries the interest name,
+    # which is what clients actually display.
+    rows = (
+        db.query(UserInterest, Interest.name)
+        .join(Interest, Interest.id == UserInterest.interest_id)
+        .filter(UserInterest.user_id == user_id)
+        .order_by(Interest.name)
+        .all()
+    )
+
+    return [
+        {
+            "id": user_interest.id,
+            "user_id": user_interest.user_id,
+            "interest_id": user_interest.interest_id,
+            "interest_name": name,
+        }
+        for user_interest, name in rows
+    ]
 
 
 def add_user_interest(
