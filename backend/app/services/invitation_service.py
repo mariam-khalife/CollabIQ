@@ -115,8 +115,9 @@ def create_invitation(
             f"to join {team.team_name}."
         ),
         related_id=invitation.id,
-        action_url="/invitations",
+        action_url="/notifications",
     )
+    db.commit()
 
     return invitation
 

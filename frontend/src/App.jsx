@@ -6,6 +6,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
+import BuildTeam from "./pages/BuildTeam";
 import AiMatching from "./pages/AiMatching";
 import AiSuggestions from "./pages/AiSuggestions";
 import TeamManagement from "./pages/TeamManagement";
@@ -48,6 +49,15 @@ function App() {
             <Layout>
               <MyProfile />
             </Layout>
+          }
+        />
+
+        <Route
+        path="/build-team"
+        element={
+          <Layout>
+            <BuildTeam />
+          </Layout>
           }
         />
 
