@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 74
+Set-Cookie: session=bbbb; HttpOnly
+Cache-Control: private
+
+{"user_id": 1001, "email": "alice@example.test", "role": "admin", "balance": 250}

@@ -1,0 +1,16 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# do not commit real captured responses; fixtures under tests/ are safe samples
+*.resp
+captured/
+
+# editor / OS cruft
+*.swp
+.DS_Store
+desktop.ini
