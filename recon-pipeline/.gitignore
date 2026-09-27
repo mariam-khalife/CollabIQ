@@ -1,0 +1,15 @@
+# recon output artifacts
+out/
+*-subs.txt
+*-resolved.txt
+*-live.txt
+*-nuclei.txt
+
+# scope files may contain sensitive target lists — never commit real ones
+scope*.txt
+!tests/**/scope*.txt
+
+# editor / OS cruft
+*.swp
+.DS_Store
+desktop.ini
