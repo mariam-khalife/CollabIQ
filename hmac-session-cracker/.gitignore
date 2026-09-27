@@ -1,0 +1,17 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# never commit real captured cookies/tokens or wordlists of secrets
+*.cookie
+secrets.txt
+wordlist.txt
+
+# editor / OS cruft
+*.swp
+.DS_Store
+desktop.ini
